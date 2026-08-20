@@ -1,0 +1,6 @@
+{
+  "name": "ROAM'S.AI V1.0",
+  "description": "Centre de contrôle numérique souverain avec Cerveau Tripartite, réponses universelles Gemini, recherche web en direct Google Search, génération et analyse de photos, Le Double autonome et mémoire souveraine.",
+  "requestFramePermissions": ["camera", "microphone", "display-capture"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

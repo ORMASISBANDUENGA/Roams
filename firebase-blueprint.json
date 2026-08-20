@@ -1,0 +1,67 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Profil souverain de l'utilisateur",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "authProvider": { "type": "string" },
+        "biometricRegistered": { "type": "boolean" },
+        "autonomyLevel": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "lastLoginAt": { "type": "string" }
+      },
+      "required": ["id", "name", "createdAt"]
+    },
+    "Memory": {
+      "title": "SovereignMemory",
+      "description": "Mémoire souveraine chiffrée ZK",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "category": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "encrypted": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "title", "content", "category", "createdAt"]
+    },
+    "Message": {
+      "title": "ChatMessage",
+      "description": "Message du canal Chatbot tripartite",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "sender": { "type": "string" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "sender", "text", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "entity": "User",
+      "description": "Document profil utilisateur"
+    },
+    "/users/{userId}/memories/{memoryId}": {
+      "entity": "Memory",
+      "description": "Sous-collection des mémoires de l'utilisateur"
+    },
+    "/users/{userId}/messages/{messageId}": {
+      "entity": "Message",
+      "description": "Sous-collection des messages de l'utilisateur"
+    }
+  }
+}
