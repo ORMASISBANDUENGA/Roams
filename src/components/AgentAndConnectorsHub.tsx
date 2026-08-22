@@ -77,26 +77,52 @@ export const AgentAndConnectorsHub: React.FC<AgentAndConnectorsHubProps> = ({
   // Social & Web Plugins State
   const [pluginsConfig, setPluginsConfig] = useState({
     whatsapp: {
-      enabled: true,
-      account: '+33 6 88 99 00 11 (Compte Professionnel)',
-      status: 'Connecté et vérifié',
-      autoReply: true,
-      lastSync: 'Il y a 3 minutes',
+      enabled: false,
+      account: 'Compte WhatsApp Cloud API',
+      status: 'Vérification...',
+      autoReply: false,
+      lastSync: 'En attente',
     },
     facebook: {
-      enabled: true,
-      account: 'Page Officielle Roam Tech',
-      status: 'Token Actif (Meta Graph API)',
-      autoModeration: true,
-      lastSync: 'Il y a 12 minutes',
+      enabled: false,
+      account: 'Page Facebook Pro',
+      status: 'Vérification...',
+      autoModeration: false,
+      lastSync: 'En attente',
     },
     customWebhook: {
-      enabled: false,
-      url: 'https://mon-site-e-commerce.com/api/webhooks/roam',
+      enabled: true,
+      url: 'https://api.votre-domaine.com/webhook',
       secret: 'whsec_sovereign_789456',
-      status: 'En attente d\'activation',
+      status: 'Prêt pour dispatch HTTP',
     },
   });
+
+  // Fetch real connector statuses on mount
+  React.useEffect(() => {
+    fetch('/api/connectors/status')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data) {
+          setPluginsConfig((prev) => ({
+            ...prev,
+            whatsapp: {
+              ...prev.whatsapp,
+              enabled: Boolean(data.whatsapp?.connected),
+              status: data.whatsapp?.connected ? 'Connecté (Meta Cloud API)' : 'Non configuré (Token manquant)',
+              lastSync: data.whatsapp?.connected ? 'Synchronisé' : 'Non connecté',
+            },
+            facebook: {
+              ...prev.facebook,
+              enabled: Boolean(data.facebook?.connected),
+              status: data.facebook?.connected ? 'Connecté (Graph API)' : 'Non configuré (Token manquant)',
+              lastSync: data.facebook?.connected ? 'Synchronisé' : 'Non connecté',
+            },
+          }));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const [pluginActionInput, setPluginActionInput] = useState('');
   const [selectedPluginForAction, setSelectedPluginForAction] = useState<'whatsapp' | 'facebook' | 'webhook'>('whatsapp');

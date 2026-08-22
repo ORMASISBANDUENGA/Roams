@@ -70,8 +70,13 @@ export const BootScreen: React.FC<BootScreenProps> = ({ onComplete, onBootComple
         className="w-full max-w-md px-4 sm:px-8 py-6 sm:py-10 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-2xl backdrop-blur-md relative my-auto"
       >
         <div className="text-center mb-6 sm:mb-8">
-          <div className="inline-flex items-center justify-center w-12 sm:w-14 h-12 sm:h-14 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 mb-3 sm:mb-4 shadow-[0_0_20px_rgba(245,158,11,0.2)]">
-            <Cpu className="w-6 sm:w-8 h-6 sm:h-8 animate-pulse" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl overflow-hidden border border-amber-500/40 mb-3 sm:mb-4 shadow-[0_0_24px_rgba(245,158,11,0.25)]">
+            <img
+              src="/icon.jpg"
+              alt="ROAM'S.ai"
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+            />
           </div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-wider text-slate-100 font-mono">
             ROAM’S.AI <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">V1.0</span>

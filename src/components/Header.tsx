@@ -75,10 +75,12 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Logo */}
           <div className="flex items-center gap-1.5 sm:gap-2 font-bold tracking-wider text-amber-400">
-            <span className="flex h-2 w-2 sm:h-2.5 sm:w-2.5 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-emerald-500"></span>
-            </span>
+            <img
+              src="/icon.jpg"
+              alt="ROAM'S.ai"
+              className="w-5 h-5 sm:w-6 sm:h-6 rounded-md object-cover border border-amber-500/40 shadow-sm"
+              referrerPolicy="no-referrer"
+            />
             <span className="text-xs sm:text-sm font-black bg-gradient-to-r from-amber-400 via-orange-400 to-amber-200 bg-clip-text text-transparent font-mono">
               ROAM’S.AI
             </span>

@@ -26,28 +26,37 @@ export const SecurityCenter: React.FC<SecurityCenterProps> = ({
 }) => {
   const [isAuditing, setIsAuditing] = useState(false);
   const [auditMessage, setAuditMessage] = useState<string | null>(null);
+  const [realChecks, setRealChecks] = useState<Array<{ id: string; label: string; passed: boolean; details: string }>>([]);
 
-  const runFullAudit = () => {
+  const runFullAudit = async () => {
     setIsAuditing(true);
-    setTimeout(() => {
-      setIsAuditing(false);
+    try {
+      const res = await fetch('/api/security/audit');
+      if (!res.ok) throw new Error(`Erreur serveur (${res.status})`);
+      const data = await res.json();
+
+      setRealChecks(data.checks || []);
       const newAudit: SecurityAuditItem = {
         id: `sec-${Date.now()}`,
         time: new Date().toLocaleTimeString().slice(0, 5),
-        event: 'Full cryptographic sandbox audit completed',
+        event: `Audit système exécuté (${data.passedChecks}/${data.totalChecks} vérifications conformes)`,
         category: 'security',
-        status: 'ok',
-        detail: 'Toutes les clés sont chiffrées en AES-256. 0 fuite détectée.',
+        status: data.score === 100 ? 'ok' : 'warn',
+        detail: `Uptime serveur: ${Math.floor(data.uptimeSeconds / 60)} min. ${data.issues?.length ? data.issues.join(' | ') : 'Aucune faille détectée.'}`,
       };
 
       setSecurityData((prev) => ({
         ...prev,
-        integrityScore: 100,
+        integrityScore: data.score ?? 100,
         auditLogs: [newAudit, ...prev.auditLogs],
       }));
-      setAuditMessage('Audit d’intégrité réussi : Système 100% hermétique et souverain.');
-      setTimeout(() => setAuditMessage(null), 4000);
-    }, 1200);
+      setAuditMessage(`Audit d’intégrité terminé avec succès : Score mesuré ${data.score}%`);
+    } catch (err: any) {
+      setAuditMessage(`Impossible d'exécuter l'audit complet : ${err.message}`);
+    } finally {
+      setIsAuditing(false);
+      setTimeout(() => setAuditMessage(null), 5000);
+    }
   };
 
   const statusTiles = [

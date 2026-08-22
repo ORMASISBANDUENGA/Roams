@@ -48,8 +48,13 @@ export const DownloadAppModal: React.FC<DownloadAppModalProps> = ({ isOpen, onCl
         {/* Header */}
         <div className="p-4 sm:p-6 border-b border-slate-800 flex items-center justify-between bg-gradient-to-r from-slate-900 to-amber-950/30 shrink-0">
           <div className="flex items-center gap-2.5 sm:gap-3">
-            <div className="w-9 sm:w-10 h-9 sm:h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.2)] shrink-0">
-              <Download className="w-4 sm:w-5 h-4 sm:h-5" />
+            <div className="w-10 sm:w-11 h-10 sm:h-11 rounded-xl overflow-hidden border border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.2)] shrink-0">
+              <img
+                src="/icon.jpg"
+                alt="ROAM'S.ai"
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
             </div>
             <div>
               <h3 className="font-mono text-sm sm:text-base font-bold text-slate-100 flex items-center gap-1.5 sm:gap-2">

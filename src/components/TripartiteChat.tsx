@@ -58,6 +58,7 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
   const [enableWebSearch, setEnableWebSearch] = useState(true);
   const [imageGenModalOpen, setImageGenModalOpen] = useState(false);
   const [selectedAspectRatio, setSelectedAspectRatio] = useState<'1:1' | '16:9' | '9:16' | '4:3'>('1:1');
+  const [selectedImageSize, setSelectedImageSize] = useState<'1K' | '2K' | '4K'>('2K');
   const [selectedTripartiteMsg, setSelectedTripartiteMsg] = useState<TripartiteAnalysis | null>(
     messages?.[0]?.tripartiteData || null
   );
@@ -321,6 +322,7 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
           enableWebSearch,
           generateImage: forceImageGen,
           aspectRatio: selectedAspectRatio,
+          imageSize: selectedImageSize,
           imageAttachment: payloadImage
             ? {
                 dataUrl: payloadImage.dataUrl,
@@ -338,7 +340,7 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || errorData.finalResponse || 'Erreur de communication avec le serveur Roam');
+        throw new Error(errorData.error || errorData.message || errorData.finalResponse || `Erreur serveur (${res.status})`);
       }
 
       const data: TripartiteAnalysis = await res.json();
@@ -373,74 +375,22 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
       // Voice output
       speakText(data.finalResponse);
     } catch (err: any) {
-      console.warn('Network or communication error, activating Client Sovereign Intelligence Engine:', err);
+      console.error('Erreur lors du traitement de la requête IA :', err);
 
-      // Client-side Sovereign Fallback response synthesizer
-      const promptLower = actualPrompt.toLowerCase();
-      let fallbackText = '';
-      let s1Answer = '';
-      const reasoning = [
-        "Activation immédiate du Moteur Cognitif Souverain Local.",
-        "Traitement sémantique et analyse visuelle de la capture d'écran.",
-        "Formulation de la résolution pas à pas sans interruption de service."
-      ];
+      const isNetworkFail = err.message?.includes('Failed to fetch');
+      const errorText = isNetworkFail
+        ? "⚠️ **Connexion au serveur ROAM'S.AI impossible**\n\nVérifiez que le serveur est démarré et que votre connexion réseau est active."
+        : `⚠️ **Service IA momentanément indisponible**\n\n${err.message || 'Une erreur est survenue lors de la communication avec le modèle IA.'}\n\n*Conseil : Vérifiez la validité de vos clés API dans les paramètres ou réessayez dans un instant.*`;
 
-      if (promptLower.includes('écran') || payloadImage) {
-        s1Answer = "Diagnostic écran : Interface scannée avec succès, identification des axes de correction.";
-        fallbackText = `### 🖥️ Diagnostic de votre Écran & Guide de Résolution
-
-J'ai analysé la capture de votre écran en direct :
-
-#### 1. 🔍 Analyse de l'Interface & Détection du Problème
-* **Contexte repéré** : Écran actif transmis via le partage sécurisé.
-* **Point d'attention** : Vérifiez l'état de la console ou le formulaire affiché à l'écran.
-
-#### 2. 🛠️ Solution Pas-à-Pas Immédiate
-1. **Étape 1** : Cliquez sur l'élément en surbrillance ou réinitialisez le champ bloquant.
-2. **Étape 2** : Assurez-vous que toutes les dépendances ou entrées requises sont complétées.
-3. **Étape 3** : Vous pouvez cliquer à nouveau sur **"Diagnostiquer mon écran"** après votre action pour que je vérifie le résultat en direct.`;
-      } else {
-        s1Answer = `Traitement souverain : analyse de "${actualPrompt.slice(0, 45)}..."`;
-        fallbackText = `### 📌 Analyse et Réponse Souveraine\n\nConcernant votre question : **"${actualPrompt}"**\n\n1. **Synthèse Fondamentale** : La thématique est analysée en profondeur selon les principes de clarté et de rigueur.\n2. **Recommandation** : Privilégier une démarche méthodique.\n3. **Assistance Continue** : Votre centre de contrôle ROAM'S.AI est prêt pour toute question complémentaire ou diagnostic d'écran en direct.`;
-      }
-
-      const localTripartiteData: TripartiteAnalysis = {
-        system1: {
-          latencyMs: 85,
-          confidence: 0.96,
-          instinctSummary: s1Answer,
-          quickAnswer: s1Answer,
-        },
-        system2: {
-          reasoningSteps: reasoning,
-          detailedResponse: fallbackText,
-          suggestedActions: ["Refaire un scan d'écran", "Sauvegarder dans la mémoire", "Activer la recherche Web"],
-          requiresCode: fallbackText.includes('```'),
-        },
-        system3: {
-          qualityScore: 97,
-          metaCritique: "Information consolidée et validée par le Cerveau Souverain Local.",
-          learningNote: "Continuité de service assurée en mode souverain.",
-        },
-        finalResponse: fallbackText,
-        moodDetected: 'analytique',
-        recommendedRewardXp: 20,
-      };
-
-      const roamMsgId = 'roam-' + Date.now();
-      const roamMsg: ChatMessage = {
-        id: roamMsgId,
+      const errorMsg: ChatMessage = {
+        id: 'err-' + Date.now(),
         sender: 'roam',
-        text: fallbackText,
+        text: errorText,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        tripartiteData: localTripartiteData,
-        modeUsed: 'Souverain Local (Hors-ligne)',
+        modeUsed: 'Erreur Système',
       };
 
-      setMessages((prev) => [...prev, roamMsg]);
-      setSelectedTripartiteMsg(localTripartiteData);
-      onAwardXp(20, 'Interaction Souveraine Locale');
-      speakText(fallbackText);
+      setMessages((prev) => [...prev, errorMsg]);
     } finally {
       setLoading(false);
     }
@@ -578,6 +528,29 @@ J'ai analysé la capture de votre écran en direct :
                     onClick={() => setSelectedAspectRatio(item.id as any)}
                     className={`py-2 px-1 text-center rounded-xl border text-xs font-mono transition-all ${
                       selectedAspectRatio === item.id
+                        ? 'bg-amber-500/20 border-amber-500 text-amber-300 font-bold'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+
+              <label className="block text-xs font-mono text-slate-300 mt-2">
+                Résolution / Définition :
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: '1K', label: '1K Standard' },
+                  { id: '2K', label: '2K Haute Définition' },
+                  { id: '4K', label: '4K Ultra HD' },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setSelectedImageSize(item.id as any)}
+                    className={`py-2 px-1 text-center rounded-xl border text-xs font-mono transition-all ${
+                      selectedImageSize === item.id
                         ? 'bg-amber-500/20 border-amber-500 text-amber-300 font-bold'
                         : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
                     }`}
@@ -852,8 +825,13 @@ J'ai analysé la capture de votre écran en direct :
                 className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}
               >
                 {!isUser && (
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-slate-950 font-bold shrink-0 shadow-md">
-                    <Bot className="w-4 h-4" />
+                  <div className="w-8 h-8 rounded-lg overflow-hidden border border-amber-500/40 shrink-0 shadow-md">
+                    <img
+                      src="/icon.jpg"
+                      alt="ROAM'S.ai"
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
                   </div>
                 )}
 

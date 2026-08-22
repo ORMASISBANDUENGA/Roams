@@ -153,9 +153,12 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
             {/* Header of Drawer */}
             <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-slate-950 font-black font-mono shadow-md">
-                  R
-                </div>
+                <img
+                  src="/icon.jpg"
+                  alt="ROAM'S.ai"
+                  className="w-10 h-10 rounded-xl object-cover border border-amber-500/40 shadow-md"
+                  referrerPolicy="no-referrer"
+                />
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-amber-400 font-mono text-sm tracking-wider">ROAM’S.AI V1.0</span>

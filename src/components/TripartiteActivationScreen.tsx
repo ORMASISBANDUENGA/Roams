@@ -32,8 +32,13 @@ export const TripartiteActivationScreen: React.FC<TripartiteActivationScreenProp
         className="w-full max-w-xl p-4 sm:p-8 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-2xl backdrop-blur-md relative my-auto"
       >
         <div className="text-center mb-5 sm:mb-8">
-          <div className="inline-flex items-center justify-center w-12 sm:w-14 h-12 sm:h-14 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 mb-2 sm:mb-3 shadow-[0_0_20px_rgba(245,158,11,0.2)]">
-            <Brain className="w-6 sm:w-8 h-6 sm:h-8 animate-pulse" />
+          <div className="inline-flex items-center justify-center w-14 sm:w-16 h-14 sm:h-16 rounded-2xl overflow-hidden border border-amber-500/40 mb-2 sm:mb-3 shadow-[0_0_24px_rgba(245,158,11,0.25)]">
+            <img
+              src="/icon.jpg"
+              alt="ROAM'S.ai"
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+            />
           </div>
           <h2 className="text-lg sm:text-xl font-bold font-mono text-slate-100">
             ACTIVATION DU CERVEAU TRIPARTITE
