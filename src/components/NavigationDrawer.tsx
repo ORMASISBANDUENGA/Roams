@@ -29,6 +29,7 @@ import {
   Trash2,
   MessageCircle,
   Facebook,
+  Info,
 } from 'lucide-react';
 import { UserIdentity, PersonalityTraits, BubbleModeConfig, EthicalBackdoorState, ChatMessage } from '../types/roam';
 
@@ -50,6 +51,7 @@ interface NavigationDrawerProps {
   onOpenConsole: () => void;
   onOpenDownloadModal: () => void;
   onOpenProfileModal: () => void;
+  onOpenManualModal?: () => void;
   onLockSession: () => void;
   onLogout: () => void;
   onToggleNode: () => void;
@@ -86,7 +88,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
     { id: 'subagents', name: '5. Sous-Agents & Ruche Spécialisée', icon: Cpu, category: 'Intelligence', badge: '7 Agents' },
     { id: 'journal', name: '6. Rêve & Journal Cognitif', icon: Calendar, category: 'Mémoire', badge: 'Nocturne' },
     { id: 'anticipation', name: '7. Anticipation & Découpage', icon: Sparkles, category: 'Intelligence', badge: 'Proactif' },
-    { id: 'manual', name: '8. Manuel & Spécifications V4.1', icon: BookOpen, category: 'Architecture', badge: '15 Piliers' },
+    { id: 'manual', name: "8. Manuel d'Utilisation Complet (28 Chapitres)", icon: Info, category: 'Architecture', badge: 'Guide 28p' },
     { id: 'capsule', name: '9. Capsule Temporelle & Archives', icon: Hourglass, category: 'Mémoire', badge: 'Immuable' },
     { id: 'bubble', name: '10. Mode Bulle Anti-Distraction', icon: VolumeX, category: 'Sécurité', badge: bubbleConfig.active ? 'Actif' : 'Veille' },
     { id: 'ethical', name: '11. Porte Éthique & Non-Ingérence', icon: Lock, category: 'Sécurité', badge: 'Audit ZK' },

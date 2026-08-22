@@ -13,6 +13,7 @@ import {
   Sliders,
   Lock,
   Zap,
+  Info,
 } from 'lucide-react';
 import { PersonalityTraits, BubbleModeConfig, EthicalBackdoorState, UserIdentity } from '../types/roam';
 
@@ -29,6 +30,7 @@ interface HeaderProps {
   onOpenDownloadModal: () => void;
   onOpenSessionEnd: () => void;
   onOpenProfileModal?: () => void;
+  onOpenManualModal?: () => void;
   voiceEnabled: boolean;
   setVoiceEnabled: (enabled: boolean) => void;
   onToggleNode: () => void;
@@ -47,6 +49,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenDownloadModal,
   onOpenSessionEnd,
   onOpenProfileModal,
+  onOpenManualModal,
   voiceEnabled,
   setVoiceEnabled,
   onToggleNode,
@@ -152,6 +155,18 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="hidden sm:inline">App V1.0</span>
             <span className="sm:hidden">App</span>
           </button>
+
+          {/* User Manual Info Button */}
+          {onOpenManualModal && (
+            <button
+              onClick={onOpenManualModal}
+              className="flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded-lg bg-slate-800 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 border border-slate-700 hover:border-amber-500/40 transition-colors cursor-pointer"
+              title="Manuel d'utilisation complet (28 chapitres)"
+            >
+              <Info className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-amber-400" />
+              <span className="hidden md:inline text-[11px] font-mono font-bold">Guide</span>
+            </button>
+          )}
 
           {/* Voice Toggle */}
           <button

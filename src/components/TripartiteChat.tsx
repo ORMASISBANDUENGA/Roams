@@ -4,6 +4,7 @@ import {
   Mic,
   MicOff,
   Volume2,
+  VolumeX,
   Sparkles,
   Zap,
   CheckCircle2,
@@ -30,8 +31,12 @@ import {
   Camera,
   AlertTriangle,
   RefreshCw,
+  Info,
+  Edit3,
+  ImagePlus,
 } from 'lucide-react';
 import { ChatMessage, PersonalityTraits, TripartiteAnalysis, BrainMode, UserIdentity } from '../types/roam';
+import { MarkdownRenderer } from './MarkdownRenderer';
 
 interface TripartiteChatProps {
   messages: ChatMessage[];
@@ -41,6 +46,7 @@ interface TripartiteChatProps {
   onAwardXp: (amount: number, reason: string) => void;
   voiceEnabled: boolean;
   user?: UserIdentity;
+  onOpenManualModal?: () => void;
 }
 
 export const TripartiteChat: React.FC<TripartiteChatProps> = ({
@@ -51,6 +57,7 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
   onAwardXp,
   voiceEnabled,
   user,
+  onOpenManualModal,
 }) => {
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -137,13 +144,44 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
     };
   }, [screenStream]);
 
-  const speakText = (text: string) => {
-    if (!voiceEnabled || !('speechSynthesis' in window)) return;
+  const [playingSpeechMsgId, setPlayingSpeechMsgId] = useState<string | null>(null);
+
+  // Strictly manual speech synthesis (only triggers on explicit user click)
+  const handleToggleSpeech = (msgId: string, text: string) => {
+    if (!('speechSynthesis' in window)) {
+      alert("La synthèse vocale n'est pas supportée par votre navigateur.");
+      return;
+    }
+
+    if (playingSpeechMsgId === msgId) {
+      window.speechSynthesis.cancel();
+      setPlayingSpeechMsgId(null);
+      return;
+    }
+
     window.speechSynthesis.cancel();
-    const cleanText = text.replace(/[*#_`]/g, '');
+    const cleanText = text
+      .replace(/[*#_`~]/g, '')
+      .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
+      .replace(/```[\s\S]*?```/g, 'Bloc de code.')
+      .trim();
+
+    if (!cleanText) return;
+
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = 'fr-FR';
     utterance.rate = 1.05;
+
+    utterance.onstart = () => {
+      setPlayingSpeechMsgId(msgId);
+    };
+    utterance.onend = () => {
+      setPlayingSpeechMsgId(null);
+    };
+    utterance.onerror = () => {
+      setPlayingSpeechMsgId(null);
+    };
+
     window.speechSynthesis.speak(utterance);
   };
 
@@ -355,6 +393,8 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
         modeUsed: brainMode === 'auto' ? 'Tripartite Complet' : `Mode ${brainMode.toUpperCase()}`,
         groundingSources: data.groundingSources,
         generatedImage: data.generatedImage,
+        isImageGeneration: data.isImageGeneration,
+        imageGenerationFailed: data.imageGenerationFailed,
       };
 
       setMessages((prev) => [...prev, roamMsg]);
@@ -371,9 +411,6 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
           lastEvolutionNote: data.system3.personalityAdjustment,
         }));
       }
-
-      // Voice output
-      speakText(data.finalResponse);
     } catch (err: any) {
       console.error('Erreur lors du traitement de la requête IA :', err);
 
@@ -726,6 +763,24 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
               <span className="text-[10px]">{enableWebSearch ? 'ON' : 'OFF'}</span>
             </button>
 
+            {/* Quick Resolution Selector */}
+            <div className="hidden lg:flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-700 text-xs font-mono">
+              {(['1K', '2K', '4K'] as const).map((res) => (
+                <button
+                  key={res}
+                  onClick={() => setSelectedImageSize(res)}
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition ${
+                    selectedImageSize === res
+                      ? 'bg-amber-500 text-slate-950 shadow'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                  title={`Résolution de génération : ${res}`}
+                >
+                  {res}
+                </button>
+              ))}
+            </div>
+
             {/* Image Gen Trigger */}
             <button
               onClick={() => setImageGenModalOpen(true)}
@@ -733,8 +788,21 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
               title="Générer une photo ou image avec Gemini"
             >
               <Wand2 className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden sm:inline">Créer Image</span>
+              <span className="hidden sm:inline">Créer Image ({selectedImageSize})</span>
+              <span className="sm:hidden">Image</span>
             </button>
+
+            {/* Manuel d'utilisation Info Button */}
+            {onOpenManualModal && (
+              <button
+                onClick={onOpenManualModal}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg border border-slate-700 bg-slate-800 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 text-xs font-mono transition-all cursor-pointer"
+                title="Consulter le Manuel d'Utilisation Complet (28 chapitres)"
+              >
+                <Info className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden md:inline">Manuel</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -880,46 +948,90 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
                     </div>
                   )}
 
-                  {/* Message content */}
-                  <div className="text-sm leading-relaxed whitespace-pre-wrap font-sans">
-                    {msg.text}
+                  {/* Message content formatted with MarkdownRenderer */}
+                  <div className="text-sm leading-relaxed font-sans">
+                    <MarkdownRenderer content={msg.text} />
                   </div>
 
                   {/* Generated Image (if Roam created one) */}
-                  {msg.generatedImage && (
-                    <div className="mt-3 p-2 bg-slate-950/80 rounded-xl border border-amber-500/30 space-y-2">
-                      <div className="flex items-center justify-between text-xs font-mono text-amber-400">
-                        <span className="flex items-center gap-1.5">
-                          <Wand2 className="w-3.5 h-3.5 text-amber-400" />
-                          Visuel généré par Gemini
+                  {msg.generatedImage && msg.generatedImage.imageUrl && (
+                    <div className="mt-3.5 p-3 sm:p-3.5 bg-slate-950/90 rounded-2xl border border-amber-500/40 space-y-3 shadow-xl">
+                      {/* Metadata Header */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono pb-2 border-b border-slate-800">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40 text-[11px]">
+                            <Wand2 className="w-3 h-3 text-amber-400" />
+                            {msg.generatedImage.model || 'Gemini 3.1 Flash Image'}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full bg-slate-800 text-amber-300 border border-slate-700 text-[10px] font-semibold">
+                            {msg.generatedImage.imageSize || selectedImageSize} {msg.generatedImage.imageSize === '4K' ? 'Ultra HD' : msg.generatedImage.imageSize === '2K' ? 'HD' : 'Standard'}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 text-[10px]">
+                            Format {msg.generatedImage.aspectRatio || selectedAspectRatio}
+                          </span>
+                        </div>
+                        <span className="text-emerald-400 font-semibold text-[11px] flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Généré avec succès
                         </span>
-                        <button
-                          onClick={() => downloadImage(msg.generatedImage!.imageUrl, `roam-${Date.now()}.png`)}
-                          className="px-2 py-0.5 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[10px] flex items-center gap-1 transition-all cursor-pointer"
-                        >
-                          <Download className="w-3 h-3" />
-                          <span>Télécharger</span>
-                        </button>
                       </div>
 
+                      {/* Visual Container with Lightbox */}
                       <div
-                        className="relative group cursor-pointer rounded-lg overflow-hidden border border-slate-800"
+                        className="relative group cursor-pointer rounded-xl overflow-hidden border border-slate-700 bg-slate-950 shadow-inner"
                         onClick={() => setZoomImage(msg.generatedImage!.imageUrl)}
                       >
                         <img
                           src={msg.generatedImage.imageUrl}
                           alt={msg.generatedImage.prompt}
-                          className="w-full max-h-72 object-cover rounded-lg shadow-md"
+                          className="w-full max-h-96 object-contain rounded-xl transition-transform duration-300 group-hover:scale-[1.01]"
                         />
-                        <div className="absolute inset-0 bg-slate-950/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white text-xs font-mono">
-                          <Maximize2 className="w-4 h-4" />
-                          <span>Plein écran</span>
+                        <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 text-white text-xs font-mono">
+                          <div className="px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-600 flex items-center gap-1.5 shadow-lg">
+                            <Maximize2 className="w-4 h-4 text-amber-400" />
+                            <span>Agrandir en Plein Écran</span>
+                          </div>
                         </div>
                       </div>
 
-                      <p className="text-[11px] text-slate-400 font-mono italic">
-                        Prompt : "{msg.generatedImage.prompt}"
-                      </p>
+                      {/* Prompt display */}
+                      <div className="p-2.5 rounded-xl bg-slate-900/70 border border-slate-800 text-xs font-mono text-slate-300">
+                        <span className="text-amber-400 font-semibold block mb-0.5 text-[10px] uppercase tracking-wider">
+                          Prompt Visuel :
+                        </span>
+                        <p className="italic text-slate-200">« {msg.generatedImage.prompt} »</p>
+                      </div>
+
+                      {/* Action Bar */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <button
+                            onClick={() => downloadImage(msg.generatedImage!.imageUrl, `roam-${Date.now()}.png`)}
+                            className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs font-mono flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Télécharger PNG</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleSendMessage(msg.generatedImage!.prompt, true)}
+                            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-amber-300 border border-slate-700 text-xs font-mono flex items-center gap-1.5 transition-all cursor-pointer"
+                            title="Régénérer cette image"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            <span>Régénérer</span>
+                          </button>
+
+                          <button
+                            onClick={() => setInputText(`Crée une image avec ${msg.generatedImage!.prompt}`)}
+                            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-amber-300 border border-slate-700 text-xs font-mono flex items-center gap-1.5 transition-all cursor-pointer"
+                            title="Modifier le prompt dans la zone de texte"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span>Modifier prompt</span>
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   )}
 
@@ -947,27 +1059,40 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
                     </div>
                   )}
 
-                  {/* Tripartite inspection badge & voice */}
-                  {msg.tripartiteData && (
-                    <div className="mt-3 pt-2 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">
-                      <button
-                        onClick={() => setSelectedTripartiteMsg(msg.tripartiteData!)}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 transition-colors cursor-pointer"
-                      >
-                        <Sliders className="w-3 h-3 text-amber-400" />
-                        Inspecter Cerveau (S1: {msg.tripartiteData.system1.latencyMs}ms | S3: {msg.tripartiteData.system3.qualityScore}%)
-                      </button>
-
-                      {voiceEnabled && (
+                  {/* Message Footer with Tripartite inspection badge & Manual Voice button */}
+                  {!isUser && (
+                    <div className="mt-3 pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2">
+                      {msg.tripartiteData && (
                         <button
-                          onClick={() => speakText(msg.text)}
-                          className="text-xs text-slate-400 hover:text-slate-200 flex items-center gap-1 cursor-pointer"
-                          title="Réécouter"
+                          onClick={() => setSelectedTripartiteMsg(msg.tripartiteData!)}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 transition-colors cursor-pointer"
                         >
-                          <Volume2 className="w-3.5 h-3.5" />
-                          <span>Vocale</span>
+                          <Sliders className="w-3 h-3 text-amber-400" />
+                          Inspecter Cerveau (S1: {msg.tripartiteData.system1.latencyMs}ms | S3: {msg.tripartiteData.system3.qualityScore}%)
                         </button>
                       )}
+
+                      <button
+                        onClick={() => handleToggleSpeech(msg.id, msg.text)}
+                        className={`text-xs px-2.5 py-1 rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer font-mono ${
+                          playingSpeechMsgId === msg.id
+                            ? 'bg-rose-500/20 border-rose-500 text-rose-300 animate-pulse font-bold'
+                            : 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-300 border-slate-700'
+                        }`}
+                        title={playingSpeechMsgId === msg.id ? "Arrêter la lecture" : "Lire ce message à voix haute (synthèse vocale)"}
+                      >
+                        {playingSpeechMsgId === msg.id ? (
+                          <>
+                            <VolumeX className="w-3.5 h-3.5 text-rose-400" />
+                            <span>Arrêter</span>
+                          </>
+                        ) : (
+                          <>
+                            <Volume2 className="w-3.5 h-3.5 text-amber-400" />
+                            <span>Synthèse vocale</span>
+                          </>
+                        )}
+                      </button>
                     </div>
                   )}
                 </div>

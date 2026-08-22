@@ -32,6 +32,7 @@ import { SettingsCenter } from './components/SettingsCenter';
 import { DownloadAppModal } from './components/DownloadAppModal';
 import { SessionEndModal } from './components/SessionEndModal';
 import { UserProfileModal } from './components/UserProfileModal';
+import { UserManualModal } from './components/UserManualModal';
 import { WelcomeBackBanner } from './components/WelcomeBackBanner';
 import { TripartiteChat } from './components/TripartiteChat';
 import { PersonalityAndDouble } from './components/PersonalityAndDouble';
@@ -117,6 +118,7 @@ export default function App() {
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [isSessionEndOpen, setIsSessionEndOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [consoleOpen, setConsoleOpen] = useState(false);
 
   // Sovereign User & Core State
@@ -152,12 +154,13 @@ export default function App() {
   // Award XP
   const handleAwardXp = (amount: number, reason: string) => {
     setRewards((prev) => {
-      const newXp = prev.totalXp + amount;
-      const nextLevel = Math.floor(newXp / 100) + 1;
+      const currentPoints = prev.points || 0;
+      const newXp = (prev.totalXp ?? currentPoints) + amount;
       return {
         ...prev,
+        points: currentPoints + amount,
         totalXp: newXp,
-        currentStreak: prev.currentStreak + 1,
+        currentStreak: (prev.currentStreak || 0) + 1,
       };
     });
   };
@@ -166,15 +169,17 @@ export default function App() {
   const handleApproveDoubleAction = (id: string) => {
     setDoubleState((prev) => ({
       ...prev,
-      pendingValidations: prev.pendingValidations.filter((a) => a.id !== id),
-      actionsExecutedToday: prev.actionsExecutedToday + 1,
+      actions: prev.actions.filter((a) => a.id !== id),
+      actionsExecutedToday: (prev.actionsExecutedToday || 0) + 1,
+      preparedActionsCount: Math.max(0, (prev.preparedActionsCount || prev.actions.length) - 1),
     }));
   };
 
   const handleDismissDoubleAction = (id: string) => {
     setDoubleState((prev) => ({
       ...prev,
-      pendingValidations: prev.pendingValidations.filter((a) => a.id !== id),
+      actions: prev.actions.filter((a) => a.id !== id),
+      preparedActionsCount: Math.max(0, (prev.preparedActionsCount || prev.actions.length) - 1),
     }));
   };
 
@@ -245,8 +250,10 @@ export default function App() {
     setCurrentScreen('login');
   };
 
-  const handleSaveNotification = (msg: string) => {
-    alert(`Paramètre enregistré : ${msg}`);
+  const handleSaveNotification = (msg?: string) => {
+    if (msg) {
+      console.log(`Paramètre enregistré : ${msg}`);
+    }
   };
 
   // Global Keyboard Shortcut: Cmd/Ctrl + K opens Console
@@ -320,6 +327,7 @@ export default function App() {
         onOpenDownloadModal={() => setIsDownloadModalOpen(true)}
         onOpenSessionEnd={() => setIsSessionEndOpen(true)}
         onOpenProfileModal={() => setIsProfileModalOpen(true)}
+        onOpenManualModal={() => setIsManualModalOpen(true)}
         voiceEnabled={voiceEnabled}
         setVoiceEnabled={setVoiceEnabled}
         onToggleNode={handleToggleNode}
@@ -347,6 +355,7 @@ export default function App() {
         onOpenConsole={() => setConsoleOpen(true)}
         onOpenDownloadModal={() => setIsDownloadModalOpen(true)}
         onOpenProfileModal={() => setIsProfileModalOpen(true)}
+        onOpenManualModal={() => setIsManualModalOpen(true)}
         onLockSession={handleLockSession}
         onLogout={handleLogout}
         onToggleNode={handleToggleNode}
@@ -388,6 +397,7 @@ export default function App() {
               onAwardXp={handleAwardXp}
               voiceEnabled={voiceEnabled}
               user={user}
+              onOpenManualModal={() => setIsManualModalOpen(true)}
             />
           </div>
         )}
@@ -522,8 +532,14 @@ export default function App() {
               <TimeCapsuleAndSecurity
                 timeCapsules={timeCapsules}
                 setTimeCapsules={setTimeCapsules}
+                bubbleConfig={bubbleConfig}
+                setBubbleConfig={setBubbleConfig}
                 ethicalState={ethicalState}
                 setEthicalState={setEthicalState}
+                rewards={rewards}
+                setRewards={setRewards}
+                personality={personality}
+                setPersonality={setPersonality}
                 onAwardXp={handleAwardXp}
               />
             )}
@@ -603,6 +619,11 @@ export default function App() {
           setIsProfileModalOpen(false);
           handleLogout();
         }}
+      />
+
+      <UserManualModal
+        isOpen={isManualModalOpen}
+        onClose={() => setIsManualModalOpen(false)}
       />
 
       <RoamConsole

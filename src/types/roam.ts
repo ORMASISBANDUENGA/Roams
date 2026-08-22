@@ -27,7 +27,7 @@ export interface UserIdentity {
   avatar: string;
   authProvider?: 'google' | 'phone' | 'email' | 'passkey' | 'local_key' | 'web3' | 'nfc';
   autonomyLevel: AutonomyLevel;
-  nodeType: 'local' | 'cloud';
+  nodeType: 'local' | 'cloud' | 'cloud_mirror';
   personalityPreset: 'professionnel' | 'amical' | 'direct' | 'dynamique' | 'sarcastique' | 'personnalise';
   lastSessionTime: string;
   onboardingCompleted: boolean;
@@ -88,6 +88,8 @@ export interface DoubleState {
   lastSyncAgo: string;
   monitoredTasksCount: number;
   preparedActionsCount: number;
+  pendingValidations?: number;
+  actionsExecutedToday?: number;
   actions: DoublePreparedAction[];
   backgroundLogs: string[];
 }
@@ -140,7 +142,13 @@ export interface TripartiteAnalysis {
     imageUrl: string;
     prompt: string;
     aspectRatio?: string;
+    imageSize?: '1K' | '2K' | '4K' | string;
+    model?: string;
+    status?: 'success' | 'failed';
+    error?: string;
   };
+  isImageGeneration?: boolean;
+  imageGenerationFailed?: boolean;
 }
 
 export interface ChatMessage {
@@ -164,7 +172,13 @@ export interface ChatMessage {
     imageUrl: string;
     prompt: string;
     aspectRatio?: string;
+    imageSize?: '1K' | '2K' | '4K' | string;
+    model?: string;
+    status?: 'success' | 'failed';
+    error?: string;
   };
+  isImageGeneration?: boolean;
+  imageGenerationFailed?: boolean;
   groundingSources?: Array<{ title: string; uri: string }>;
   toolsUsed?: string[];
   suggestedActions?: string[];
@@ -287,10 +301,24 @@ export interface AnticipationCard {
   };
 }
 
+export interface RewardBadge {
+  id: string;
+  name: string;
+  icon: string;
+  title?: string;
+  description?: string;
+  tier?: string;
+  unlockedAt?: string;
+}
+
 export interface RewardState {
   points: number;
+  totalXp?: number;
   level: string;
-  badges: Array<{ id: string; name: string; icon: string; unlockedAt?: string }>;
+  levelNumber?: number;
+  nextLevelPoints?: number;
+  currentStreak?: number;
+  badges: RewardBadge[];
 }
 
 

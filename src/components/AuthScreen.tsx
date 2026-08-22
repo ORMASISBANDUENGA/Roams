@@ -147,7 +147,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   onStartOnboarding,
 }) => {
   const [authMethod, setAuthMethod] = useState<AuthMethod>('google');
-  const [nodeType, setNodeType] = useState<'local' | 'cloud'>(user.nodeType || 'local');
+  const [nodeType, setNodeType] = useState<'local' | 'cloud'>(user.nodeType === 'cloud' ? 'cloud' : 'local');
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [authSuccess, setAuthSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');

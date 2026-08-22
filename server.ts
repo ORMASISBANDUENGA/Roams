@@ -132,43 +132,91 @@ function parseDataUrl(dataUrl: string): { mimeType: string; base64: string } {
   return { mimeType: "image/jpeg", base64: dataUrl };
 }
 
+// Sophisticated Image Intent Classifier & Prompt Extractor
+export function classifyImageIntent(text: string): { isImageGen: boolean; visualPrompt: string } {
+  if (!text || typeof text !== "string") return { isImageGen: false, visualPrompt: "" };
+  const raw = text.trim();
+  const lower = raw.toLowerCase();
+
+  // EXCLUSIONS: Requests that must NEVER trigger image generation (Vision, descriptions, tutorials, tables, code)
+  const isExclusion =
+    lower.startsWith("analyse cette image") ||
+    lower.startsWith("analyse l'image") ||
+    lower.startsWith("analyse mon image") ||
+    lower.startsWith("que vois-tu") ||
+    lower.startsWith("que contient cette image") ||
+    lower.startsWith("décris-moi une image") ||
+    lower.startsWith("décris moi une image") ||
+    lower.startsWith("décris une image") ||
+    lower.startsWith("décris l'image") ||
+    lower.startsWith("décris cette image") ||
+    lower.startsWith("décris la photo") ||
+    lower.startsWith("donne-moi un prompt") ||
+    lower.startsWith("donne moi un prompt") ||
+    lower.startsWith("propose un prompt") ||
+    lower.startsWith("génère un prompt") ||
+    lower.startsWith("générer un prompt") ||
+    lower.startsWith("écris un prompt") ||
+    lower.startsWith("trouve un prompt") ||
+    lower.startsWith("explique-moi comment générer") ||
+    lower.startsWith("comment générer une image") ||
+    lower.startsWith("fais-moi un tableau") ||
+    lower.startsWith("fais un tableau") ||
+    lower.startsWith("tableau de") ||
+    lower.startsWith("génère du code") ||
+    lower.startsWith("génère un composant") ||
+    lower.startsWith("génère un script") ||
+    lower.startsWith("génère une fonction");
+
+  if (isExclusion) {
+    return { isImageGen: false, visualPrompt: raw };
+  }
+
+  // 1. Explicit Slash Commands: /image, /photo, /dessine, /draw
+  if (lower.startsWith("/image ") || lower.startsWith("/photo ") || lower.startsWith("/dessine ") || lower.startsWith("/draw ")) {
+    const cleaned = raw.replace(/^(\/image|\/photo|\/dessine|\/draw)\s+/i, "").trim();
+    return { isImageGen: true, visualPrompt: cleaned || raw };
+  }
+
+  // 2. Explicit Generation Commands: "crée une image", "génère une photo", "dessine-moi", etc.
+  const explicitGenRegex = /^(s'il te plaît\s*,?\s*|peux-tu\s+|stp\s*,?\s*|merci de\s+)?(crée(-moi)?|créer|génère(-moi)?|générer|dessine(-moi)?|dessiner|fais(-moi)?|produis(-moi)?|produire|conçois(-moi)?|concevoir|generate|create|draw)\s+(une\s+image|une\s+photo|une\s+illustration|un\s+visuel|un\s+dessin|le\s+nom|an\s+image|a\s+photo|a\s+picture|a\s+drawing)\b/i;
+
+  if (explicitGenRegex.test(lower)) {
+    let cleaned = raw
+      .replace(/^(s'il te plaît\s*,?\s*|peux-tu\s+|stp\s*,?\s*|merci de\s+)?/i, "")
+      .replace(/^(crée(-moi)?|créer|génère(-moi)?|générer|dessine(-moi)?|dessiner|fais(-moi)?|produis(-moi)?|produire|conçois(-moi)?|concevoir|generate|create|draw)\s+(une\s+image|une\s+photo|une\s+illustration|un\s+visuel|un\s+dessin|an\s+image|a\s+photo|a\s+picture|a\s+drawing)\s+(de|d'un|d'une|avec|qui\s+représente|montrant|portant\s+le\s+nom|ayant\s+le\s+nom|of|with)?\s*/i, "")
+      .replace(/^(crée(-moi)?|créer|génère(-moi)?|générer)\s+/i, "")
+      .trim();
+
+    return { isImageGen: true, visualPrompt: cleaned || raw };
+  }
+
+  // 3. Direct Drawing Commands: "dessine un lion...", "draw a sunset..."
+  const directDrawRegex = /^(s'il te plaît\s*,?\s*|peux-tu\s+|stp\s*,?\s*|merci de\s+)?(dessine(-moi)?|dessiner|draw)\s+(un|une|des|le|la|les|a|an)?\s+/i;
+  if (directDrawRegex.test(lower)) {
+    let cleaned = raw
+      .replace(/^(s'il te plaît\s*,?\s*|peux-tu\s+|stp\s*,?\s*|merci de\s+)?/i, "")
+      .replace(/^(dessine(-moi)?|dessiner|draw)\s+/i, "")
+      .trim();
+    return { isImageGen: true, visualPrompt: cleaned || raw };
+  }
+
+  // 4. Name / Text rendering on object: "Génère le nom OROMASIS sur une palissade en bois"
+  const nameRenderingRegex = /^(génère|crée|dessine|produis|generate|create)\s+(le\s+nom|le\s+texte|le\s+mot)\s+(.+?)\s+(sur|sur\s+une|sur\s+un|dans|on|in)\s+(.+)/i;
+  if (nameRenderingRegex.test(lower)) {
+    let cleaned = raw.replace(/^(génère|crée|dessine|produis|generate|create)\s+/i, "").trim();
+    return { isImageGen: true, visualPrompt: cleaned || raw };
+  }
+
+  return { isImageGen: false, visualPrompt: raw };
+}
+
 function isImageGenerationPrompt(text: string): boolean {
-  const lower = (text || "").toLowerCase();
-  return (
-    lower.startsWith("/image") ||
-    lower.startsWith("/photo") ||
-    lower.startsWith("/dessine") ||
-    lower.includes("génère une image") ||
-    lower.includes("génère une photo") ||
-    lower.includes("générer une image") ||
-    lower.includes("générer une photo") ||
-    lower.includes("génère-moi une image") ||
-    lower.includes("génère moi une photo") ||
-    lower.includes("crée une image") ||
-    lower.includes("crée une photo") ||
-    lower.includes("créer une image") ||
-    lower.includes("créer une photo") ||
-    lower.includes("dessine-moi") ||
-    lower.includes("dessine une") ||
-    lower.includes("fais une image") ||
-    lower.includes("fais-moi une photo") ||
-    lower.includes("generate an image") ||
-    lower.includes("generate a photo") ||
-    lower.includes("create an image") ||
-    lower.includes("draw me")
-  );
+  return classifyImageIntent(text).isImageGen;
 }
 
 function cleanImagePrompt(text: string): string {
-  return text
-    .replace(/^\/image\s*/i, "")
-    .replace(/^\/photo\s*/i, "")
-    .replace(/^\/dessine\s*/i, "")
-    .replace(/^génère(-moi)? une (image|photo) (de|d'un|d'une|avec)?\s*/i, "")
-    .replace(/^crée(-moi)? une (image|photo) (de|d'un|d'une|avec)?\s*/i, "")
-    .replace(/^dessine(-moi)? (une|un)?\s*/i, "")
-    .replace(/^generate (an image|a photo) of\s*/i, "")
-    .trim() || text;
+  return classifyImageIntent(text).visualPrompt;
 }
 
 async function startServer() {
@@ -619,6 +667,7 @@ Si vous souhaitez approfondir un volet particulier (code, modélisation ou inter
         enableWebSearch,
         generateImage: forceGenerateImage,
         aspectRatio = "1:1",
+        imageSize = "2K",
         engine,
         provider,
         openaiApiKey,
@@ -632,20 +681,58 @@ Si vous souhaitez approfondir un volet particulier (code, modélisation ou inter
       const proactivity = personality?.proactivite ?? 0.6;
       const brevity = personality?.longueur ?? 0.5;
 
-      const wantsImageGen = forceGenerateImage || isImageGenerationPrompt(promptText);
+      const classification = classifyImageIntent(promptText);
+      const wantsImageGen = Boolean(forceGenerateImage) || classification.isImageGen;
+      const visualPrompt = classification.visualPrompt || promptText;
 
-      // Handle Image Generation in Tripartite Chat
-      let generatedImageData: { imageUrl: string; prompt: string; aspectRatio?: string } | undefined = undefined;
-      if (wantsImageGen && ai) {
+      const targetSize = imageSize === "4K" || imageSize === "2K" || imageSize === "1K" ? imageSize : "2K";
+      const targetRatio = ["1:1", "3:4", "4:3", "9:16", "16:9"].includes(aspectRatio) ? aspectRatio : "1:1";
+
+      // Handle Image Generation Requests Authentically (No text placeholder hallucinations)
+      if (wantsImageGen) {
+        if (!ai) {
+          return res.json({
+            system1: {
+              latencyMs: 10,
+              confidence: 0,
+              instinctSummary: "Échec de génération d'image : Clé API manquante",
+              quickAnswer: "Génération d'image indisponible",
+            },
+            system2: {
+              reasoningSteps: [
+                "1. Détection de l'intention IMAGE_GENERATION",
+                "2. Vérification des accès au service d'imagerie",
+                "3. Clé API GEMINI_API_KEY non configurée",
+              ],
+              detailedResponse: "La génération d'image est actuellement indisponible.",
+              suggestedActions: ["Configurer GEMINI_API_KEY", "Passer en mode texte"],
+              requiresCode: false,
+            },
+            system3: {
+              qualityScore: 0,
+              metaCritique: "Signalement transparent de l'indisponibilité du service d'imagerie sans simulation fictive.",
+              learningNote: "Clé API requise pour la génération d'images.",
+            },
+            finalResponse: `⚠️ **La génération d'image est actuellement indisponible.**\n\nImpossible de générer le visuel pour : *« ${visualPrompt} »*. Veuillez configurer votre clé API Gemini pour activer la génération haute définition.`,
+            moodDetected: "neutre",
+            recommendedRewardXp: 5,
+            isImageGeneration: true,
+            imageGenerationFailed: true,
+          });
+        }
+
+        const promptToUse = expandImagePrompt(visualPrompt);
+        let imageDataUrl = "";
+        let genError = "";
+
         try {
-          const cleanPrompt = expandImagePrompt(promptText);
           const imgResponse = await ai.models.generateContent({
             model: "gemini-3.1-flash-image",
-            contents: { parts: [{ text: cleanPrompt }] },
+            contents: { parts: [{ text: promptToUse }] },
             config: {
               imageConfig: {
-                aspectRatio: (["1:1", "3:4", "4:3", "9:16", "16:9"].includes(aspectRatio) ? aspectRatio : "1:1") as any,
-                imageSize: "1K",
+                aspectRatio: targetRatio as any,
+                imageSize: targetSize as any,
               },
             },
           });
@@ -654,37 +741,100 @@ Si vous souhaitez approfondir un volet particulier (code, modélisation ou inter
           for (const part of parts) {
             if (part.inlineData?.data) {
               const mime = part.inlineData.mimeType || "image/png";
-              generatedImageData = {
-                imageUrl: `data:${mime};base64,${part.inlineData.data}`,
-                prompt: cleanPrompt,
-                aspectRatio,
-              };
+              imageDataUrl = `data:${mime};base64,${part.inlineData.data}`;
               break;
             }
           }
-        } catch (imgGenErr) {
-          console.warn("Direct image generation within tripartite failed, attempting lite...", imgGenErr);
+        } catch (flashErr: any) {
+          console.warn("Primary image model failed, trying fallback...", flashErr?.message || flashErr);
+          genError = flashErr?.message || "Erreur du modèle";
           try {
-            const cleanPrompt = expandImagePrompt(promptText);
             const fallbackImg = await ai.models.generateContent({
               model: "gemini-3.1-flash-lite-image",
-              contents: { parts: [{ text: cleanPrompt }] },
+              contents: { parts: [{ text: promptToUse }] },
             });
             const parts = fallbackImg.candidates?.[0]?.content?.parts || [];
             for (const part of parts) {
               if (part.inlineData?.data) {
                 const mime = part.inlineData.mimeType || "image/png";
-                generatedImageData = {
-                  imageUrl: `data:${mime};base64,${part.inlineData.data}`,
-                  prompt: cleanPrompt,
-                  aspectRatio,
-                };
+                imageDataUrl = `data:${mime};base64,${part.inlineData.data}`;
                 break;
               }
             }
-          } catch (e) {
-            console.error("Fallback image gen failed", e);
+          } catch (fallbackErr: any) {
+            console.error("Fallback image model also failed:", fallbackErr?.message || fallbackErr);
+            genError = fallbackErr?.message || genError;
           }
+        }
+
+        if (imageDataUrl) {
+          const generatedImageData = {
+            imageUrl: imageDataUrl,
+            prompt: visualPrompt,
+            aspectRatio: targetRatio,
+            imageSize: targetSize,
+            model: "gemini-3.1-flash-image",
+            status: "success" as const,
+          };
+
+          return res.json({
+            system1: {
+              latencyMs: 95,
+              confidence: 0.99,
+              instinctSummary: `Intention IMAGE_GENERATION validée (${targetSize} - ${targetRatio})`,
+              quickAnswer: `Image générée en ${targetSize} pour : "${visualPrompt}"`,
+            },
+            system2: {
+              reasoningSteps: [
+                `1. Intention IMAGE_GENERATION identifiée avec succès`,
+                `2. Extraction du prompt visuel : "${visualPrompt}"`,
+                `3. Synthèse via Gemini 3.1 Flash Image`,
+                `4. Rendu en résolution ${targetSize} (${targetRatio})`,
+              ],
+              detailedResponse: `✨ Image générée avec succès en résolution **${targetSize}** (${targetRatio}) pour : *« ${visualPrompt} »*`,
+              suggestedActions: ["Télécharger en HD", "Agrandir en plein écran", "Régénérer avec variations"],
+              requiresCode: false,
+            },
+            system3: {
+              qualityScore: 99,
+              metaCritique: `Rendu visuel fidèle en résolution native ${targetSize}.`,
+              learningNote: `Génération d'image aboutie.`,
+            },
+            finalResponse: `✨ **Image générée avec succès** en résolution **${targetSize}** (${targetRatio}) :\n\n*« ${visualPrompt} »*`,
+            moodDetected: "créatif",
+            recommendedRewardXp: 40,
+            generatedImage: generatedImageData,
+            isImageGeneration: true,
+          });
+        } else {
+          return res.json({
+            system1: {
+              latencyMs: 50,
+              confidence: 0,
+              instinctSummary: "Échec de génération d'image",
+              quickAnswer: "Génération d'image indisponible",
+            },
+            system2: {
+              reasoningSteps: [
+                "1. Détection de l'intention IMAGE_GENERATION",
+                "2. Appel du modèle d'imagerie distante",
+                `3. Indisponibilité du service ou quota atteint : ${genError}`,
+              ],
+              detailedResponse: "La génération d'image est actuellement indisponible.",
+              suggestedActions: ["Vérifier le quota Gemini", "Réessayer dans un instant"],
+              requiresCode: false,
+            },
+            system3: {
+              qualityScore: 0,
+              metaCritique: "Signalement transparent de l'échec d'imagerie sans simulation fictive.",
+              learningNote: "Indisponibilité temporaire des modèles d'imagerie.",
+            },
+            finalResponse: `⚠️ **La génération d'image est actuellement indisponible.**\n\nImpossible de générer le visuel pour : *« ${visualPrompt} »*. Les modèles de génération d'image sont temporairement indisponibles ou le quota a été atteint. Veuillez réessayer dans quelques instants.`,
+            moodDetected: "neutre",
+            recommendedRewardXp: 5,
+            isImageGeneration: true,
+            imageGenerationFailed: true,
+          });
         }
       }
 
@@ -752,9 +902,6 @@ Structure de retour JSON stricte :
             "gpt-4o"
           );
           if (openAIData && (openAIData.finalResponse || openAIData.system2?.detailedResponse)) {
-            if (generatedImageData) {
-              openAIData.generatedImage = generatedImageData;
-            }
             return res.json(openAIData);
           }
         } catch (openAiErr: any) {
@@ -893,9 +1040,6 @@ Structure de retour JSON stricte :
             parsed.finalResponse = parsed.finalResponse || parsed.system2?.detailedResponse;
             parsed.groundingSources = groundingSources.length > 0 ? groundingSources : undefined;
             parsed.isWebSearch = shouldUseSearch && groundingSources.length > 0;
-            if (generatedImageData) {
-              parsed.generatedImage = generatedImageData;
-            }
             return res.json(parsed);
           } else if (rawText.trim()) {
             return res.json({
@@ -923,7 +1067,6 @@ Structure de retour JSON stricte :
               finalResponse: rawText,
               groundingSources: groundingSources.length > 0 ? groundingSources : undefined,
               isWebSearch: shouldUseSearch && groundingSources.length > 0,
-              generatedImage: generatedImageData,
               moodDetected: "concentré",
               recommendedRewardXp: 25,
             });

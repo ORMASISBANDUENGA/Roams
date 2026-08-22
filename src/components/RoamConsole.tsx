@@ -117,8 +117,8 @@ export const RoamConsole: React.FC<RoamConsoleProps> = ({
       case 'rewards':
         setLogs((prev) => [
           ...prev,
-          { text: `Niveau Actuel : ${rewards.level} (${rewards.points} XP / ${rewards.nextLevelPoints} XP)`, type: 'success' },
-          { text: `Badges : ${rewards.badges.map((b) => b.title).join(', ')}`, type: 'info' },
+          { text: `Niveau Actuel : ${rewards.level} (${rewards.points} XP / ${rewards.nextLevelPoints ?? 2000} XP)`, type: 'success' },
+          { text: `Badges : ${rewards.badges.map((b) => b.title || b.name).join(', ')}`, type: 'info' },
         ]);
         break;
 

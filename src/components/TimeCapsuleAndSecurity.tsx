@@ -363,12 +363,12 @@ export const TimeCapsuleAndSecurity: React.FC<TimeCapsuleAndSecurityProps> = ({
         <div className="space-y-1">
           <div className="flex justify-between text-xs text-slate-400 font-mono">
             <span>Progression vers {rewards.level === 'Expert' ? 'Maître (1000 XP)' : 'Légende (5000 XP)'}</span>
-            <span>{rewards.points} / {rewards.nextLevelPoints} XP</span>
+            <span>{rewards.points} / {rewards.nextLevelPoints ?? 2000} XP</span>
           </div>
           <div className="w-full bg-slate-950 rounded-full h-2.5 border border-slate-800 overflow-hidden">
             <div
               className="bg-gradient-to-r from-amber-500 to-orange-500 h-full rounded-full transition-all duration-500"
-              style={{ width: `${Math.min(100, (rewards.points / rewards.nextLevelPoints) * 100)}%` }}
+              style={{ width: `${Math.min(100, (rewards.points / (rewards.nextLevelPoints ?? 2000)) * 100)}%` }}
             ></div>
           </div>
         </div>
@@ -392,10 +392,10 @@ export const TimeCapsuleAndSecurity: React.FC<TimeCapsuleAndSecurityProps> = ({
                 <Award className="w-5 h-5" />
               </div>
 
-              <div className="font-bold text-xs text-slate-100">{badge.title}</div>
-              <p className="text-[11px] text-slate-400 leading-tight">{badge.description}</p>
+              <div className="font-bold text-xs text-slate-100">{badge.title || badge.name}</div>
+              <p className="text-[11px] text-slate-400 leading-tight">{badge.description || badge.name}</p>
               <div className="text-[10px] text-amber-400/80 font-mono pt-1">
-                Débloqué : {badge.unlockedAt}
+                Débloqué : {badge.unlockedAt || 'Récemment'}
               </div>
             </div>
           ))}

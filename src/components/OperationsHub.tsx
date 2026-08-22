@@ -23,6 +23,7 @@ import {
   Layers,
   HardDrive,
   MessageSquare,
+  Info,
 } from 'lucide-react';
 import { UserIdentity, SystemMetrics, DoubleState, PersonalityTraits, BubbleModeConfig } from '../types/roam';
 
@@ -172,10 +173,10 @@ export const OperationsHub: React.FC<OperationsHubProps> = ({
         {
           id: 'manual',
           number: '11',
-          name: 'Manuel & Spécifications V4.1',
-          desc: 'Les 10 Commandements de Roam, cahier des charges officiel et architecture.',
-          icon: BookOpen,
-          badge: 'Spécifications',
+          name: "Manuel d'Utilisation Complet",
+          desc: 'Guide officiel utilisateur, administration, sécurité, 28 chapitres et architecture.',
+          icon: Info,
+          badge: '28 Chapitres',
           badgeColor: 'text-amber-300 bg-amber-500/20',
         },
         {
