@@ -31,8 +31,24 @@ async function callOpenAIReal(
   apiKey: string,
   prompt: string,
   systemPrompt: string,
+  history?: Array<{ role: string; content: string }>,
   model = "gpt-4o"
 ) {
+  const messages: any[] = [{ role: "system", content: systemPrompt }];
+
+  if (Array.isArray(history) && history.length > 0) {
+    for (const item of history) {
+      if (item.content) {
+        messages.push({
+          role: item.role === "assistant" || item.role === "model" ? "assistant" : "user",
+          content: item.content,
+        });
+      }
+    }
+  }
+
+  messages.push({ role: "user", content: prompt });
+
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -41,10 +57,7 @@ async function callOpenAIReal(
     },
     body: JSON.stringify({
       model: model || "gpt-4o",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: prompt },
-      ],
+      messages,
       temperature: 0.7,
       response_format: { type: "json_object" },
     }),
@@ -611,6 +624,7 @@ Si vous souhaitez approfondir un volet particulier (code, modélisation ou inter
     try {
       const {
         prompt,
+        conversationHistory,
         context,
         personality,
         systemMode,
@@ -748,6 +762,7 @@ Structure de retour JSON stricte :
             effectiveOpenAIKey,
             promptText,
             systemPrompt,
+            conversationHistory,
             "gpt-4o"
           );
           if (openAIData && (openAIData.finalResponse || openAIData.system2?.detailedResponse)) {
@@ -757,14 +772,59 @@ Structure de retour JSON stricte :
             return res.json(openAIData);
           }
         } catch (openAiErr: any) {
-          console.warn("Real OpenAI call failed, falling back to sovereign resilient engine...", openAiErr.message);
+          console.warn("Real OpenAI call failed:", openAiErr.message);
+          return res.status(502).json({
+            error: `Erreur OpenAI (${openAiErr.message})`,
+            finalResponse: `⚠️ Erreur OpenAI : ${openAiErr.message}. Vérifiez la validité de votre clé API OpenAI.`,
+            system1: {
+              latencyMs: 0,
+              confidence: 0,
+              instinctSummary: "Échec d'appel OpenAI",
+              quickAnswer: "Erreur OpenAI",
+            },
+            system2: {
+              reasoningSteps: ["1. Tentative d'appel OpenAI API", "2. Échec de validation de clé ou réseau"],
+              detailedResponse: `Échec de l'appel OpenAI : ${openAiErr.message}`,
+              suggestedActions: ["Vérifier la clé OpenAI"],
+              requiresCode: false,
+            },
+            system3: {
+              qualityScore: 0,
+              metaCritique: "Erreur OpenAI signalée.",
+              learningNote: "Clé OpenAI invalide ou quota dépassé.",
+            },
+            moodDetected: "neutre",
+          });
         }
       }
 
       if (ai) {
         let contentsPayload: any;
 
-        if (imageAttachment?.dataUrl) {
+        if (Array.isArray(conversationHistory) && conversationHistory.length > 0) {
+          const turns: any[] = [];
+          for (const item of conversationHistory) {
+            if (item.content) {
+              turns.push({
+                role: item.role === "assistant" || item.role === "model" ? "model" : "user",
+                parts: [{ text: item.content }],
+              });
+            }
+          }
+          if (imageAttachment?.dataUrl) {
+            const { mimeType, base64 } = parseDataUrl(imageAttachment.dataUrl);
+            turns.push({
+              role: "user",
+              parts: [{ inlineData: { mimeType, data: base64 } }, { text: promptText }],
+            });
+          } else {
+            turns.push({
+              role: "user",
+              parts: [{ text: promptText }],
+            });
+          }
+          contentsPayload = turns;
+        } else if (imageAttachment?.dataUrl) {
           const { mimeType, base64 } = parseDataUrl(imageAttachment.dataUrl);
           const imagePart = {
             inlineData: {
@@ -886,16 +946,40 @@ Structure de retour JSON stricte :
         }
       }
 
-      // High quality sovereign offline / fallback generator
-      const sovereignData = generateSovereignKnowledgeResponse(promptText, personality, systemMode);
-      if (generatedImageData) {
-        sovereignData.generatedImage = generatedImageData;
-      }
-      return res.json(sovereignData);
+      // If all AI models are unavailable, return an honest message
+      return res.status(503).json({
+        error: "Modèles d'IA temporairement indisponibles",
+        finalResponse: "⚠️ Le service d'IA distant est momentanément indisponible ou a atteint son quota. Veuillez réessayer dans quelques instants.",
+        system1: {
+          latencyMs: 0,
+          confidence: 0,
+          instinctSummary: "Service d'IA indisponible",
+          quickAnswer: "Service momentanément indisponible.",
+        },
+        system2: {
+          reasoningSteps: [
+            "1. Tentative de contact avec les modèles Gemini et OpenAI",
+            "2. Quota atteint ou indisponibilité temporaire",
+            "3. Notification transparente de l'état du système",
+          ],
+          detailedResponse: "Les modèles d'intelligence artificielle sont actuellement indisponibles. Vos données et votre historique local restent préservés.",
+          suggestedActions: ["Réessayer dans un instant", "Vérifier la connexion réseau"],
+          requiresCode: false,
+        },
+        system3: {
+          qualityScore: 0,
+          metaCritique: "Indisponibilité signalée de manière transparente sans simulation.",
+          learningNote: "Indisponibilité API.",
+        },
+        moodDetected: "neutre",
+        recommendedRewardXp: 0,
+      });
     } catch (err: any) {
-      console.error("Tripartite Critical Fallback:", err);
-      const emergencyFallback = generateSovereignKnowledgeResponse(req.body?.prompt || "Bonjour");
-      return res.json(emergencyFallback);
+      console.error("Tripartite Critical Error:", err);
+      return res.status(500).json({
+        error: err.message || "Erreur serveur interne",
+        finalResponse: `⚠️ Une erreur est survenue lors du traitement : ${err.message || 'Erreur inconnue'}.`,
+      });
     }
   });
 
@@ -1409,10 +1493,10 @@ Format strict JSON attendu :
     }
   });
 
-  // Terminal Command Execution Agent (Real Process Sandbox Execution)
+  // Terminal Command Execution Agent (Secure Sandbox Execution)
   app.post("/api/roam/terminal/execute", async (req, res) => {
     try {
-      const { command, confirmed = false } = req.body;
+      const { command } = req.body;
       if (!command || typeof command !== "string") {
         return res.status(400).json({ error: "La commande à exécuter est requise." });
       }
@@ -1420,45 +1504,51 @@ Format strict JSON attendu :
       const trimmed = command.trim();
       const lower = trimmed.toLowerCase();
 
-      // Ethical & Safety Guardrails
-      const dangerousPatterns = [
-        "rm -rf /",
-        ":(){ :|:& };:",
-        "mkfs",
-        "dd if=/dev",
-        "> /dev/sda",
-        "chmod -r 777 /",
-        "shutdown -h now",
-        "init 0",
+      // Denylist: Block destructive, privilege escalation and remote code execution tokens
+      const blockedTokens = [
+        "rm", "sudo", "chmod", "chown", "mkfs", "dd", "shutdown", "reboot",
+        "wget", "curl", "nc", "bash -i", "sh -i", "eval", "exec", "| bash",
+        "| sh", "> /dev/", "kill", "passwd", "su ", "useradd", "usermod",
+        "apt", "apk", "yum", "pacman", "systemctl", "service", "iptables",
+        "ufw", "telnet", "ssh", "pkill", "killall", "crontab", ":(){ :|:& };:"
       ];
 
-      for (const pattern of dangerousPatterns) {
-        if (lower.includes(pattern)) {
+      for (const token of blockedTokens) {
+        if (new RegExp(`(?:^|[\\s|;&><])${token.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}(?:[\\s|;&><]|$)`, 'i').test(trimmed) || lower.includes(token)) {
           return res.json({
             success: false,
             blocked: true,
-            reason: `Commande bloquée par la charte éthique et de sécurité souveraine (${pattern}).`,
-            output: "ABORTED: Sécurité système garantie.",
+            reason: `Action bloquée par la barrière de sécurité et de non-ingérence éthique (motif de sécurité : ${token}).`,
+            output: "BLOCKED: Exécution interrompue pour protéger le système et l'intégrité des données.",
           });
         }
       }
 
-      // If requires confirmation
-      const isCritical = lower.startsWith("rm ") || lower.startsWith("drop ") || lower.includes("delete") || lower.startsWith("kill");
-      if (isCritical && !confirmed) {
+      // Safe commands allowlist verification
+      const safePrefixes = [
+        "git", "npm", "node", "python", "python3", "ls", "pwd", "date",
+        "uptime", "whoami", "echo", "cat", "head", "tail", "find", "grep",
+        "wc", "du", "tree", "stat", "df"
+      ];
+
+      const isAllowed = safePrefixes.some((prefix) =>
+        lower === prefix || lower.startsWith(`${prefix} `)
+      );
+
+      if (!isAllowed) {
         return res.json({
           success: false,
-          needsConfirmation: true,
-          command: trimmed,
-          warning: "Cette commande modifie ou supprime des ressources. Confirmation explicite requise.",
+          blocked: true,
+          reason: "Pour votre sécurité, seules les commandes d'inspection, de développement et d'analyse sont autorisées (git, npm, node, python, ls, grep, echo, etc.).",
+          output: "BLOCKED: Commande hors du périmètre de développement sécurisé.",
         });
       }
 
-      // Execute REAL command via child_process
+      // Execute safe command via child_process
       try {
         const { stdout, stderr } = await execAsync(trimmed, {
-          timeout: 12000,
-          maxBuffer: 1024 * 1024 * 5, // 5MB output buffer
+          timeout: 10000,
+          maxBuffer: 1024 * 1024 * 2, // 2MB output buffer
           cwd: process.cwd(),
           env: {
             ...process.env,

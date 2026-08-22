@@ -236,7 +236,7 @@ export const OperationsHub: React.FC<OperationsHubProps> = ({
           name: 'Agent Téléphonie & Appels Vocaux',
           desc: 'Déléguez des appels ("Appelle X et dis-lui...") avec voix IA et transcription.',
           icon: MessageSquare,
-          badge: 'Passerelle WebRTC/SIP',
+          badge: 'Script IA & Voix WebSpeech',
           badgeColor: 'text-emerald-300 bg-emerald-500/20',
         },
         {
@@ -285,16 +285,16 @@ export const OperationsHub: React.FC<OperationsHubProps> = ({
           <div className="space-y-1.5 max-w-2xl">
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono font-bold tracking-wider px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                💎 HUB DES 15 PILIERS • PARTIE GESTION & OPÉRATIONS
+                💎 HUB DES 19 MODULES • GESTION, OPÉRATIONS & CONNECTEURS
               </span>
-              <span className="text-xs font-mono text-slate-400">15/15 Piliers Opérationnels</span>
+              <span className="text-xs font-mono text-slate-400">15 Fondamentaux + 4 Connecteurs</span>
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-slate-100 font-sans tracking-tight">
               Centre des Opérations Souveraines & Capacités Intégrées
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-              Toutes les 15 fonctionnalités de l'architecture <strong className="text-slate-200">ROAM'S.AI V1.0</strong> sont
-              organisées de manière claire et accessible en un clic.
+              Les 19 modules et connecteurs d'action de l'architecture <strong className="text-slate-200">ROAM'S.AI V1.0</strong> sont
+              organisés de manière claire et accessible en un clic.
             </p>
           </div>
 

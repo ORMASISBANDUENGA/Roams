@@ -300,12 +300,22 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
     setAttachedImage(null);
     setLoading(true);
 
+    const conversationHistory = messages
+      .slice(-8)
+      .filter((m) => m.text && (m.sender === 'user' || m.sender === 'roam'))
+      .map((m) => ({
+        role: m.sender === 'user' ? 'user' : 'assistant',
+        content: m.text,
+      }));
+
     try {
       const res = await fetch('/api/roam/tripartite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: actualPrompt,
+          conversationHistory,
+          engine: selectedEngine,
           personality,
           systemMode: brainMode !== 'auto' ? brainMode : undefined,
           enableWebSearch,
@@ -327,7 +337,8 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
       });
 
       if (!res.ok) {
-        throw new Error('Erreur de communication avec le serveur Roam');
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.finalResponse || 'Erreur de communication avec le serveur Roam');
       }
 
       const data: TripartiteAnalysis = await res.json();

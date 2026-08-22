@@ -42,6 +42,8 @@ import { TimeCapsuleAndSecurity } from './components/TimeCapsuleAndSecurity';
 import { ManualAndSpecs } from './components/ManualAndSpecs';
 import { RoamConsole } from './components/RoamConsole';
 import { AgentAndConnectorsHub } from './components/AgentAndConnectorsHub';
+import { EthicalGate } from './components/EthicalGate';
+import { RewardsCenter } from './components/RewardsCenter';
 
 import {
   initialSystemMetrics,
@@ -528,11 +530,18 @@ export default function App() {
 
             {/* 11. Porte Éthique & Souveraineté */}
             {activeFeature === 'ethical' && (
-              <TimeCapsuleAndSecurity
-                timeCapsules={timeCapsules}
-                setTimeCapsules={setTimeCapsules}
+              <EthicalGate
                 ethicalState={ethicalState}
                 setEthicalState={setEthicalState}
+                onAwardXp={handleAwardXp}
+              />
+            )}
+
+            {/* 13. Niveaux, Trophées & XP */}
+            {activeFeature === 'rewards' && (
+              <RewardsCenter
+                user={user}
+                onUpgradeAutonomy={(lvl) => setUser((prev) => ({ ...prev, autonomyLevel: lvl }))}
                 onAwardXp={handleAwardXp}
               />
             )}
