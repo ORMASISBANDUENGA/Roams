@@ -77,15 +77,20 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
   // Fullscreen image viewer
   const [zoomImage, setZoomImage] = useState<string | null>(null);
 
-  // Screen Sharing State
+  // Engine Selection: Gemini 3.7 vs ChatGPT / GPT-4o
+  const [selectedEngine, setSelectedEngine] = useState<'gemini' | 'chatgpt'>('gemini');
+
+  // Screen Sharing State & Continuous Auto-Observation
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
   const [screenMinimized, setScreenMinimized] = useState(false);
   const [isCapturingScreen, setIsCapturingScreen] = useState(false);
+  const [continuousObserve, setContinuousObserve] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const screenVideoRef = useRef<HTMLVideoElement>(null);
+  const continuousTimerRef = useRef<any>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -102,12 +107,32 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
     }
   }, [screenStream, isScreenSharing, screenMinimized]);
 
+  // Continuous screen observation loop
+  useEffect(() => {
+    if (continuousObserve && isScreenSharing) {
+      continuousTimerRef.current = setInterval(() => {
+        if (!loading && !isCapturingScreen) {
+          handleDiagnoseScreen("Observation continue : Analyse ce qui a changé à mon écran et dis-moi ce que je dois faire.");
+        }
+      }, 25000);
+    } else {
+      if (continuousTimerRef.current) {
+        clearInterval(continuousTimerRef.current);
+        continuousTimerRef.current = null;
+      }
+    }
+    return () => {
+      if (continuousTimerRef.current) clearInterval(continuousTimerRef.current);
+    };
+  }, [continuousObserve, isScreenSharing, loading, isCapturingScreen]);
+
   // Clean up screen sharing on unmount
   useEffect(() => {
     return () => {
       if (screenStream) {
         screenStream.getTracks().forEach((t) => t.stop());
       }
+      if (continuousTimerRef.current) clearInterval(continuousTimerRef.current);
     };
   }, [screenStream]);
 
@@ -121,7 +146,7 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
     window.speechSynthesis.speak(utterance);
   };
 
-  // Start Screen Sharing
+  // Start Screen Sharing with Auto-Observation
   const handleStartScreenShare = async () => {
     try {
       if (!navigator.mediaDevices?.getDisplayMedia) {
@@ -144,6 +169,11 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
       stream.getVideoTracks()[0].onended = () => {
         handleStopScreenShare();
       };
+
+      // Automatically trigger initial live observation after short delay for video frame buffer
+      setTimeout(() => {
+        handleDiagnoseScreen("Analyse mon écran en direct. Indique clairement ce que tu vois actuellement et ce que je dois faire concrètement.");
+      }, 1000);
     } catch (err: any) {
       if (err.name !== 'NotAllowedError') {
         console.warn("Erreur lors de l'activation du partage d'écran :", err);
@@ -158,9 +188,10 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
     }
     setScreenStream(null);
     setIsScreenSharing(false);
+    setContinuousObserve(false);
   };
 
-  // Capture current screen frame & analyze with Roam AI
+  // Capture current screen frame & analyze with Roam AI (Live Perception & Guidance)
   const handleDiagnoseScreen = async (customPrompt?: string) => {
     if (!screenVideoRef.current || !screenStream) {
       alert("Aucun flux d'écran actif à capturer.");
@@ -190,7 +221,7 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
       const promptToUse =
         customPrompt ||
         inputText.trim() ||
-        "Voici la capture en direct de mon écran. Analyse l'interface, identifie le problème, l'erreur technique ou le blocage, et guide-moi précisément étape par étape pour le résoudre.";
+        "Analyse mon écran en direct. Décris fidèlement ce que tu vois actuellement et donne-moi les actions concrètes que je dois faire pas à pas.";
 
       // Send directly with captured image
       await handleSendMessageWithPayload(promptToUse, false, capturedAttachment);
@@ -646,8 +677,32 @@ J'ai analysé la capture de votre écran en direct :
             </div>
           </div>
 
-          {/* Quick AI Tools Toggles */}
+          {/* Quick AI Tools & Engine Selector */}
           <div className="flex items-center gap-2">
+            {/* AI Provider Switcher (Gemini / ChatGPT) */}
+            <div className="hidden md:flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-700 text-xs font-mono">
+              <button
+                onClick={() => setSelectedEngine('gemini')}
+                className={`px-2 py-0.5 rounded text-[11px] font-bold transition ${
+                  selectedEngine === 'gemini'
+                    ? 'bg-amber-500 text-slate-950 shadow'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Gemini 3.7
+              </button>
+              <button
+                onClick={() => setSelectedEngine('chatgpt')}
+                className={`px-2 py-0.5 rounded text-[11px] font-bold transition ${
+                  selectedEngine === 'chatgpt'
+                    ? 'bg-emerald-500 text-slate-950 shadow'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                ChatGPT
+              </button>
+            </div>
+
             {/* Screen Sharing Toggle Button */}
             <button
               onClick={isScreenSharing ? handleStopScreenShare : handleStartScreenShare}
@@ -661,7 +716,7 @@ J'ai analysé la capture de votre écran en direct :
               {isScreenSharing ? (
                 <>
                   <MonitorOff className="w-3.5 h-3.5 text-rose-400" />
-                  <span>Écran Partagé</span>
+                  <span>Écran Actif</span>
                 </>
               ) : (
                 <>
@@ -701,8 +756,8 @@ J'ai analysé la capture de votre écran en direct :
 
         {/* LIVE SCREEN MONITOR WIDGET (when screen sharing is active) */}
         {isScreenSharing && (
-          <div className="bg-slate-950 border-b border-amber-500/40 p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xl">
-            <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="bg-slate-950 border-b border-amber-500/40 p-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-xl">
+            <div className="flex items-center gap-3 w-full md:w-auto">
               <div className="relative w-28 h-18 sm:w-36 sm:h-22 rounded-lg overflow-hidden border border-amber-500/60 bg-black shrink-0 shadow-md">
                 <video
                   ref={screenVideoRef}
@@ -713,37 +768,53 @@ J'ai analysé la capture de votre écran en direct :
                 />
                 <div className="absolute top-1 left-1 bg-red-600/90 text-white text-[9px] font-mono px-1 py-0.2 rounded flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
-                  <span>DIRECT</span>
+                  <span>VISION LIVE</span>
                 </div>
               </div>
 
               <div className="space-y-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold font-mono text-amber-300">
-                    🖥️ Partage d'Écran Actif avec ROAM'S.AI
+                    👁️ Guidage Visuel en Direct Activé
+                  </span>
+                  <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    IA Active
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-400 leading-tight">
-                  L'IA peut voir votre écran en temps réel pour analyser votre problème technique et vous guider.
+                  L'IA analyse votre écran et vous indique exactement ce qu'elle voit et ce que vous devez faire.
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+              <button
+                onClick={() => setContinuousObserve(!continuousObserve)}
+                className={`px-2.5 py-2 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 transition cursor-pointer ${
+                  continuousObserve
+                    ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 shadow'
+                    : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-slate-200'
+                }`}
+                title="Analyser l'écran automatiquement toutes les 25 secondes"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${continuousObserve ? 'animate-spin text-emerald-400' : ''}`} />
+                <span>{continuousObserve ? 'Observation Continue ON' : 'Observation Continue'}</span>
+              </button>
+
               <button
                 onClick={() => handleDiagnoseScreen()}
                 disabled={isCapturingScreen || loading}
-                className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-mono font-bold text-xs flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-all cursor-pointer"
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-mono font-bold text-xs flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-all cursor-pointer"
               >
                 {isCapturingScreen ? (
                   <>
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Capture en cours...</span>
+                    <span>Analyse...</span>
                   </>
                 ) : (
                   <>
                     <Camera className="w-3.5 h-3.5" />
-                    <span>🔍 Diagnostiquer mon écran</span>
+                    <span>🔍 Analyser l'écran</span>
                   </>
                 )}
               </button>

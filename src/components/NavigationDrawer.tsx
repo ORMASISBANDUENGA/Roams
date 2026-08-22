@@ -94,6 +94,10 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
     { id: 'rewards', name: '13. Niveaux, Trophées & XP', icon: Zap, category: 'Architecture', badge: `Niveau ${user.autonomyLevel}` },
     { id: 'settings', name: '14. Paramètres & Personnalité', icon: Sliders, category: 'Architecture', badge: personality.ton },
     { id: 'download', name: "15. Téléchargement & Multi-App", icon: Download, category: 'Architecture', badge: 'V1.0 Pro' },
+    { id: 'terminal', name: "16. Agent Terminal & Commandes PC", icon: Terminal, category: 'Action', badge: 'CLI Runner' },
+    { id: 'calls', name: "17. Agent Téléphonie & Appels Vocaux", icon: MessageCircle, category: 'Action', badge: 'Voix IA' },
+    { id: 'plugins', name: "18. WhatsApp, Facebook & Webhooks", icon: Facebook, category: 'Action', badge: 'Connecteurs' },
+    { id: 'hosting_seo', name: "19. Hébergement & Search Console", icon: HardDrive, category: 'Architecture', badge: 'SEO Google' },
   ];
 
   // Filter messages for history

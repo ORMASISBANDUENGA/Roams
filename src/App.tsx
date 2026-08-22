@@ -41,6 +41,7 @@ import { SubAgentsAndMemory } from './components/SubAgentsAndMemory';
 import { TimeCapsuleAndSecurity } from './components/TimeCapsuleAndSecurity';
 import { ManualAndSpecs } from './components/ManualAndSpecs';
 import { RoamConsole } from './components/RoamConsole';
+import { AgentAndConnectorsHub } from './components/AgentAndConnectorsHub';
 
 import {
   initialSystemMetrics,
@@ -544,6 +545,21 @@ export default function App() {
                 personality={personality}
                 setPersonality={setPersonality}
                 onSaveNotification={handleSaveNotification}
+              />
+            )}
+
+            {/* Agent d'Exécution, Terminal PC, Téléphonie, WhatsApp, Facebook & Search Console */}
+            {(activeFeature === 'agent' ||
+              activeFeature === 'connectors' ||
+              activeFeature === 'terminal' ||
+              activeFeature === 'plugins' ||
+              activeFeature === 'calls' ||
+              activeFeature === 'hosting_seo') && (
+              <AgentAndConnectorsHub
+                user={user}
+                personality={personality}
+                onAwardXp={handleAwardXp}
+                voiceEnabled={voiceEnabled}
               />
             )}
           </div>

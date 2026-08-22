@@ -241,6 +241,34 @@ export const SettingsCenter: React.FC<SettingsCenterProps> = ({
                   </div>
                 </div>
               </div>
+
+              {/* Moteurs & Clés IA (Gemini & ChatGPT) */}
+              <div className="space-y-3 pt-3 border-t border-slate-800">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono font-bold text-slate-200">
+                    Moteur IA &amp; Intégration ChatGPT / OpenAI
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    Multi-Moteur Prêt
+                  </span>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                  <label className="block text-[11px] font-mono text-slate-400">
+                    Clé API OpenAI / ChatGPT (Optionnel) :
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="sk-proj-..."
+                    defaultValue={localStorage.getItem('roam_openai_key') || ''}
+                    onChange={(e) => localStorage.setItem('roam_openai_key', e.target.value)}
+                    className="w-full p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-xs font-mono text-emerald-300 focus:border-amber-500 focus:outline-none"
+                  />
+                  <p className="text-[10px] text-slate-500 font-mono">
+                    Permet d'interroger directement ChatGPT (GPT-4o) en parallèle du Cerveau Tripartite Gemini.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 

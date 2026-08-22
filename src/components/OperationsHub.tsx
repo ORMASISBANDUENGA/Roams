@@ -216,6 +216,49 @@ export const OperationsHub: React.FC<OperationsHubProps> = ({
         },
       ],
     },
+    {
+      title: '5. Agent d\'Action, Terminal PC & Connecteurs Externes',
+      description: 'Exécution de commandes terminal, appels vocaux autonomes, connecteurs WhatsApp / Facebook et Google Search Console',
+      color: 'from-amber-500/30 to-emerald-500/20 border-amber-500/40',
+      items: [
+        {
+          id: 'terminal',
+          number: '16',
+          name: 'Agent Terminal & Commandes PC',
+          desc: 'Exécutez des commandes et scripts sur votre ordinateur de façon sécurisée.',
+          icon: Terminal,
+          badge: 'Shell Sécurisé',
+          badgeColor: 'text-amber-300 bg-amber-500/20',
+        },
+        {
+          id: 'calls',
+          number: '17',
+          name: 'Agent Téléphonie & Appels Vocaux',
+          desc: 'Déléguez des appels ("Appelle X et dis-lui...") avec voix IA et transcription.',
+          icon: MessageSquare,
+          badge: 'Passerelle WebRTC/SIP',
+          badgeColor: 'text-emerald-300 bg-emerald-500/20',
+        },
+        {
+          id: 'plugins',
+          number: '18',
+          name: 'Connecteurs WhatsApp, Meta & Webhooks',
+          desc: 'Gérez vos comptes WhatsApp, Facebook et sites tiers de manière éthique.',
+          icon: HardDrive,
+          badge: 'Plugins Éthiques',
+          badgeColor: 'text-blue-300 bg-blue-500/20',
+        },
+        {
+          id: 'hosting_seo',
+          number: '19',
+          name: 'Hébergement & Google Search Console',
+          desc: 'Guide de déploiement multi-cloud, balise de vérification et sitemap XML.',
+          icon: HardDrive,
+          badge: 'SEO & Search Console',
+          badgeColor: 'text-purple-300 bg-purple-500/20',
+        },
+      ],
+    },
   ];
 
   const handleAction = (id: string) => {
