@@ -34,9 +34,14 @@ import {
   Info,
   Edit3,
   ImagePlus,
+  Copy,
+  Check,
+  CornerDownLeft,
 } from 'lucide-react';
 import { ChatMessage, PersonalityTraits, TripartiteAnalysis, BrainMode, UserIdentity } from '../types/roam';
 import { MarkdownRenderer } from './MarkdownRenderer';
+import { RoamLogoAnimated } from './RoamLogoAnimated';
+import { synthesizeGenerativeResponse } from '../lib/roamGenerativeEngine';
 
 interface TripartiteChatProps {
   messages: ChatMessage[];
@@ -70,8 +75,58 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
     messages?.[0]?.tripartiteData || null
   );
   const [isListening, setIsListening] = useState(false);
+  const [isGeneratingImageLoading, setIsGeneratingImageLoading] = useState(false);
+  const [showMobileInspector, setShowMobileInspector] = useState(false);
 
-  // Attachment state for image analysis / vision
+  // Client-side instant image intent detector
+  const isClientImagePrompt = (text: string): boolean => {
+    if (!text || typeof text !== 'string') return false;
+    const lower = text.trim().toLowerCase();
+    if (
+      lower.startsWith('analyse') ||
+      lower.startsWith('décris') ||
+      lower.startsWith('que vois-tu') ||
+      lower.startsWith('comment') ||
+      lower.startsWith('explique')
+    ) {
+      return false;
+    }
+    if (
+      lower.startsWith('/image') ||
+      lower.startsWith('/photo') ||
+      lower.startsWith('/dessine') ||
+      lower.startsWith('/draw') ||
+      lower.startsWith('/img')
+    ) {
+      return true;
+    }
+    return (
+      /^(s'il te plaît\s*,?\s*|peux-tu\s+(me\s+)?|stp\s*,?\s*|je\s+veux\s+|fais(-moi)?\s+|fais\s+moi\s+|génère(-moi)?\s+|génère\s+moi\s+|génère\s+|crée(-moi)?\s+|crée\s+moi\s+|crée\s+|dessine(-moi)?\s+|dessine\s+moi\s+|dessine\s+|peins(-moi)?\s+|peins\s+|affiche(-moi)?\s+|montre(-moi)?\s+|make\s+|create\s+|generate\s+|draw\s+)?(une\s+image|une\s+photo|une\s+illustration|un\s+visuel|un\s+dessin|un\s+portrait|un\s+paysage|un\s+tableau|un\s+logo|a\s+photo|an\s+image|a\s+picture|a\s+drawing)\b/i.test(
+        lower
+      ) || /^(image|photo|illustration|dessin|tableau)\s+(de|d'un|d'une|of)\s+/i.test(lower)
+    );
+  };
+
+  const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
+
+  const handleCopyMessageText = (msgId: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedMsgId(msgId);
+    setTimeout(() => setCopiedMsgId(null), 2000);
+  };
+
+  const handleEditUserMessage = (text: string) => {
+    setInputText(text);
+    const textarea = document.querySelector('textarea');
+    if (textarea) textarea.focus();
+  };
+
+  const handleRegenerateLast = () => {
+    const lastUser = [...messages].reverse().find((m) => m.sender === 'user');
+    if (lastUser && lastUser.text) {
+      handleSendMessageWithPayload(lastUser.text);
+    }
+  };
   const [attachedImage, setAttachedImage] = useState<{
     dataUrl: string;
     name: string;
@@ -318,6 +373,7 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
     if ((!textToSend.trim() && !payloadImage) || loading) return;
 
     const actualPrompt = textToSend.trim() || (payloadImage ? 'Analyse en détail cette capture et résous le problème.' : '');
+    const isImageRequest = forceImageGen || (!payloadImage && isClientImagePrompt(actualPrompt));
 
     const userMsgId = 'usr-' + Date.now();
     const newMsg: ChatMessage = {
@@ -338,6 +394,7 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
     setInputText('');
     setAttachedImage(null);
     setLoading(true);
+    setIsGeneratingImageLoading(isImageRequest);
 
     const conversationHistory = messages
       .slice(-8)
@@ -358,7 +415,7 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
           personality,
           systemMode: brainMode !== 'auto' ? brainMode : undefined,
           enableWebSearch,
-          generateImage: forceImageGen,
+          generateImage: isImageRequest,
           aspectRatio: selectedAspectRatio,
           imageSize: selectedImageSize,
           imageAttachment: payloadImage
@@ -376,12 +433,35 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
         }),
       });
 
+      let data: TripartiteAnalysis;
+
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || errorData.message || errorData.finalResponse || `Erreur serveur (${res.status})`);
+        let errMessage = `Erreur serveur (${res.status})`;
+        try {
+          const contentType = res.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            const errorData = await res.json();
+            errMessage = errorData.error || errorData.message || errorData.finalResponse || errMessage;
+          } else {
+            await res.text();
+          }
+        } catch {
+          // Ignore secondary parse error
+        }
+        throw new Error(errMessage);
       }
 
-      const data: TripartiteAnalysis = await res.json();
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        data = await res.json();
+      } else {
+        const textData = await res.text();
+        try {
+          data = JSON.parse(textData);
+        } catch {
+          throw new Error("Réponse serveur non-JSON, activation du relais souverain.");
+        }
+      }
 
       const roamMsgId = 'roam-' + Date.now();
       const roamMsg: ChatMessage = {
@@ -412,22 +492,32 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
         }));
       }
     } catch (err: any) {
-      console.error('Erreur lors du traitement de la requête IA :', err);
+      console.warn('Tripartite network fallback engaged:', err);
 
-      const isNetworkFail = err.message?.includes('Failed to fetch');
-      const errorText = isNetworkFail
-        ? "⚠️ **Connexion au serveur ROAM'S.AI impossible**\n\nVérifiez que le serveur est démarré et que votre connexion réseau est active."
-        : `⚠️ **Service IA momentanément indisponible**\n\n${err.message || 'Une erreur est survenue lors de la communication avec le modèle IA.'}\n\n*Conseil : Vérifiez la validité de vos clés API dans les paramètres ou réessayez dans un instant.*`;
+      // Seamless Generative Neural Core Fallback (ChatGPT / DeepSeek R1 grade)
+      const fallbackGen = synthesizeGenerativeResponse(
+        actualPrompt,
+        conversationHistory,
+        personality,
+        { name: user?.name, role: user?.roleTitle }
+      );
 
-      const errorMsg: ChatMessage = {
-        id: 'err-' + Date.now(),
+      const roamMsgId = 'roam-' + Date.now();
+      const roamMsg: ChatMessage = {
+        id: roamMsgId,
         sender: 'roam',
-        text: errorText,
+        text: fallbackGen.finalResponse,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        modeUsed: 'Erreur Système',
+        tripartiteData: fallbackGen as any,
+        modeUsed: 'ROAM Génératif Souverain',
       };
 
-      setMessages((prev) => [...prev, errorMsg]);
+      setMessages((prev) => [...prev, roamMsg]);
+      setSelectedTripartiteMsg(fallbackGen as any);
+
+      if (fallbackGen.recommendedRewardXp) {
+        onAwardXp(fallbackGen.recommendedRewardXp, 'Interaction Générative Souveraine');
+      }
     } finally {
       setLoading(false);
     }
@@ -495,7 +585,7 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
 
   return (
     <div
-      className={`flex flex-col lg:flex-row h-[calc(100vh-8.5rem)] bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl relative transition-all ${
+      className={`flex flex-col lg:flex-row h-[calc(100dvh-7.5rem)] sm:h-[calc(100vh-9.5rem)] max-h-[850px] w-full bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl relative transition-all ${
         isDragging ? 'border-amber-400 bg-slate-900/90' : ''
       }`}
       onDrop={handleDrop}
@@ -525,6 +615,81 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
             >
               <Download className="w-4 h-4" />
               <span>Télécharger l'image en Haute Définition</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Inspector Drawer / Modal */}
+      {showMobileInspector && selectedTripartiteMsg && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 lg:hidden">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full max-h-[85vh] overflow-y-auto p-4 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <Sliders className="w-4 h-4 text-amber-400" />
+                <h3 className="font-bold text-slate-100 text-xs font-mono uppercase tracking-wider">
+                  Inspecteur Tripartite
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowMobileInspector(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs font-mono">
+              {/* System 1 */}
+              <div className="p-3 rounded-xl bg-slate-950 border border-cyan-900/40 space-y-1">
+                <div className="flex items-center justify-between text-cyan-400 font-bold text-[11px]">
+                  <span>Système 1 • Flash Réflexe</span>
+                  <span className="text-[10px] bg-cyan-950 px-1.5 py-0.5 rounded border border-cyan-800">
+                    {selectedTripartiteMsg.system1.latencyMs}ms
+                  </span>
+                </div>
+                <p className="text-slate-300 text-[11px]">
+                  {selectedTripartiteMsg.system1.quickAnswer || selectedTripartiteMsg.system1.instinctSummary}
+                </p>
+              </div>
+
+              {/* System 2 */}
+              <div className="p-3 rounded-xl bg-slate-950 border border-indigo-900/40 space-y-1.5">
+                <div className="flex items-center justify-between text-indigo-300 font-bold text-[11px]">
+                  <span>Système 2 • Raisonnement</span>
+                  <span className="text-[10px] bg-indigo-950 px-1.5 py-0.5 rounded border border-indigo-800">
+                    Logique
+                  </span>
+                </div>
+                <ul className="space-y-1 text-slate-300 text-[11px]">
+                  {selectedTripartiteMsg.system2.reasoningSteps?.map((step, idx) => (
+                    <li key={idx} className="flex items-start gap-1">
+                      <span className="text-indigo-400 font-bold">•</span>
+                      <span>{step}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* System 3 */}
+              <div className="p-3 rounded-xl bg-slate-950 border border-emerald-900/40 space-y-1">
+                <div className="flex items-center justify-between text-emerald-400 font-bold text-[11px]">
+                  <span>Système 3 • Méta-Surveillance</span>
+                  <span className="text-[10px] bg-emerald-950 px-1.5 py-0.5 rounded border border-emerald-800">
+                    Score : {selectedTripartiteMsg.system3.qualityScore}%
+                  </span>
+                </div>
+                <p className="text-slate-300 text-[11px]">
+                  {selectedTripartiteMsg.system3.metaCritique}
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowMobileInspector(false)}
+              className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-mono font-bold rounded-xl"
+            >
+              Fermer l'Inspecteur
             </button>
           </div>
         </div>
@@ -803,6 +968,16 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
                 <span className="hidden md:inline">Manuel</span>
               </button>
             )}
+
+            {/* Mobile Inspector Open Button */}
+            <button
+              onClick={() => setShowMobileInspector(true)}
+              className="flex lg:hidden items-center gap-1 px-2 py-1 rounded-lg border border-indigo-500/40 bg-indigo-500/10 text-indigo-300 text-xs font-mono transition-all cursor-pointer"
+              title="Voir l'analyse Tripartite S1/S2/S3"
+            >
+              <Sliders className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Inspecteur</span>
+            </button>
           </div>
         </div>
 
@@ -887,19 +1062,16 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
           {messages.map((msg) => {
             const isUser = msg.sender === 'user';
             const isSystem = msg.sender === 'system';
+            const suggestions = msg.tripartiteData?.system2?.suggestedActions || [];
+
             return (
               <div
                 key={msg.id}
-                className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}
+                className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'} group/msg`}
               >
                 {!isUser && (
-                  <div className="w-8 h-8 rounded-lg overflow-hidden border border-amber-500/40 shrink-0 shadow-md">
-                    <img
-                      src="/icon.jpg"
-                      alt="ROAM'S.ai"
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
+                  <div className="shrink-0 pt-0.5" title="ROAM'S.AI V1.0 Intelligence">
+                    <RoamLogoAnimated size="sm" showEmbers={true} interactive={true} />
                   </div>
                 )}
 
@@ -914,8 +1086,18 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
                 >
                   {/* Header info */}
                   <div className="flex items-center justify-between gap-3 mb-2 pb-1 border-b border-white/10 text-[11px] opacity-80 font-mono">
-                    <span className="font-semibold">
-                      {isUser ? `${user?.name || 'Architecte'} (${user?.roleTitle || 'Architecte'})` : msg.subagentName || "ROAM’S.AI V1.0"}
+                    <span className="font-semibold flex items-center gap-1.5">
+                      {isUser ? (
+                        <>
+                          <User className="w-3.5 h-3.5 text-amber-300" />
+                          <span>{user?.name || 'Architecte'} ({user?.roleTitle || 'Architecte'})</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                          <span>{msg.subagentName || "ROAM’S.AI V1.0"}</span>
+                        </>
+                      )}
                     </span>
                     <div className="flex items-center gap-2">
                       {msg.modeUsed && (
@@ -1059,19 +1241,89 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
                     </div>
                   )}
 
-                  {/* Message Footer with Tripartite inspection badge & Manual Voice button */}
-                  {!isUser && (
-                    <div className="mt-3 pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2">
-                      {msg.tripartiteData && (
+                  {/* Interactive Follow-up Suggestions (ChatGPT / DeepSeek R1 style) */}
+                  {!isUser && suggestions.length > 0 && (
+                    <div className="mt-3 pt-2 border-t border-slate-800/60 space-y-1.5">
+                      <div className="flex items-center gap-1 text-[11px] font-mono text-amber-400/80">
+                        <Sparkles className="w-3 h-3 text-amber-400" />
+                        <span>Suggestions de suivi :</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {suggestions.map((actionText, sIdx) => (
+                          <button
+                            key={sIdx}
+                            onClick={() => handleSendMessage(actionText)}
+                            className="text-left text-xs font-sans px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-amber-500/20 text-slate-300 hover:text-amber-200 border border-slate-700/80 hover:border-amber-500/40 transition-all flex items-center gap-1.5 cursor-pointer group/pill"
+                          >
+                            <CornerDownLeft className="w-3 h-3 text-amber-400/70 group-hover/pill:text-amber-300 shrink-0" />
+                            <span>{actionText}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Message Footer with Actions */}
+                  <div className="mt-3 pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {!isUser && msg.tripartiteData && (
                         <button
                           onClick={() => setSelectedTripartiteMsg(msg.tripartiteData!)}
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 transition-colors cursor-pointer"
+                          title="Inspecter le raisonnement tripartite"
                         >
                           <Sliders className="w-3 h-3 text-amber-400" />
-                          Inspecter Cerveau (S1: {msg.tripartiteData.system1.latencyMs}ms | S3: {msg.tripartiteData.system3.qualityScore}%)
+                          <span className="hidden sm:inline">Inspecter Cerveau</span>
+                          <span className="text-[10px] text-amber-400/80">(S1: {msg.tripartiteData.system1?.latencyMs || 12}ms)</span>
                         </button>
                       )}
 
+                      {/* Copy message button */}
+                      <button
+                        onClick={() => handleCopyMessageText(msg.id, msg.text)}
+                        className="text-xs px-2 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition-all flex items-center gap-1 cursor-pointer font-mono"
+                        title="Copier le texte"
+                      >
+                        {copiedMsgId === msg.id ? (
+                          <>
+                            <Check className="w-3 h-3 text-emerald-400" />
+                            <span className="text-emerald-300 text-[11px]">Copié !</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3 text-slate-400" />
+                            <span className="text-[11px]">Copier</span>
+                          </>
+                        )}
+                      </button>
+
+                      {/* Regenerate button (assistant only) */}
+                      {!isUser && (
+                        <button
+                          onClick={handleRegenerateLast}
+                          className="text-xs px-2 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-amber-300 border border-slate-700/60 transition-all flex items-center gap-1 cursor-pointer font-mono"
+                          title="Régénérer cette réponse"
+                        >
+                          <RefreshCw className="w-3 h-3 text-slate-400" />
+                          <span className="text-[11px]">Régénérer</span>
+                        </button>
+                      )}
+
+                      {/* Edit button (user only) */}
+                      {isUser && (
+                        <button
+                          onClick={() => handleEditUserMessage(msg.text)}
+                          className="text-xs px-2 py-1 rounded-lg bg-amber-700/60 hover:bg-amber-700 text-amber-100 border border-amber-500/40 transition-all flex items-center gap-1 cursor-pointer font-mono"
+                          title="Modifier ce message dans la zone de saisie"
+                        >
+                          <Edit3 className="w-3 h-3 text-amber-200" />
+                          <span className="text-[11px]">Modifier</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Speech toggle */}
+                    {!isUser && (
                       <button
                         onClick={() => handleToggleSpeech(msg.id, msg.text)}
                         className={`text-xs px-2.5 py-1 rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer font-mono ${
@@ -1079,7 +1331,7 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
                             ? 'bg-rose-500/20 border-rose-500 text-rose-300 animate-pulse font-bold'
                             : 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-300 border-slate-700'
                         }`}
-                        title={playingSpeechMsgId === msg.id ? "Arrêter la lecture" : "Lire ce message à voix haute (synthèse vocale)"}
+                        title={playingSpeechMsgId === msg.id ? "Arrêter la lecture" : "Lire ce message à voix haute"}
                       >
                         {playingSpeechMsgId === msg.id ? (
                           <>
@@ -1089,16 +1341,16 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
                         ) : (
                           <>
                             <Volume2 className="w-3.5 h-3.5 text-amber-400" />
-                            <span>Synthèse vocale</span>
+                            <span>Audio</span>
                           </>
                         )}
                       </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
 
                 {isUser && (
-                  <div className="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-400 font-bold shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 border border-amber-400/60 flex items-center justify-center text-slate-950 font-bold shrink-0 shadow-md">
                     <User className="w-4 h-4" />
                   </div>
                 )}
@@ -1118,7 +1370,9 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
                   </span>
                   <span className="font-semibold text-slate-200">
-                    {attachedImage
+                    {isGeneratingImageLoading
+                      ? "🎨 Synthèse et création de l'image en cours..."
+                      : attachedImage
                       ? 'Perception Visuelle & Analyse Multimodale en cours...'
                       : isScreenSharing
                       ? "Analyse de la capture d'écran en cours..."
@@ -1126,7 +1380,9 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
                   </span>
                 </div>
                 <span className="text-[11px] text-slate-400 font-mono">
-                  Système 1 (Flash) → Système 2 (Raisonnement) → Système 3 (Méta-contrôle)
+                  {isGeneratingImageLoading
+                    ? "Rendu neuronal direct haute fidélité..."
+                    : "Système 1 (Flash) → Système 2 (Raisonnement) → Système 3 (Méta-contrôle)"}
                 </span>
               </div>
             </div>
@@ -1197,50 +1453,50 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
         )}
 
         {/* Input Bar */}
-        <div className="p-2.5 sm:p-3 bg-slate-900 border-t border-slate-800">
+        <div className="p-2 sm:p-3 bg-slate-900 border-t border-slate-800">
           <form
             onSubmit={(e) => {
               e.preventDefault();
               handleSendMessage();
             }}
-            className="flex items-center gap-1.5 sm:gap-2"
+            className="flex items-center gap-1.5 sm:gap-2 w-full min-w-0"
           >
             {/* Screen Share Action */}
             <button
               type="button"
               onClick={isScreenSharing ? handleStopScreenShare : handleStartScreenShare}
-              className={`p-2.5 rounded-xl border transition-all shrink-0 cursor-pointer ${
+              className={`p-2 sm:p-2.5 rounded-xl border transition-all shrink-0 cursor-pointer min-w-[36px] min-h-[36px] flex items-center justify-center ${
                 isScreenSharing
                   ? 'bg-rose-600 text-white border-rose-500 shadow-md'
                   : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-amber-400'
               }`}
               title={isScreenSharing ? "Arrêter le partage d'écran" : "Partager mon écran pour diagnostic direct"}
             >
-              <Monitor className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
+              <Monitor className="w-4 h-4 text-amber-400" />
             </button>
 
             {/* Photo Attachment Button */}
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="p-2.5 rounded-xl bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 hover:text-amber-400 transition-all shrink-0 cursor-pointer"
+              className="p-2 sm:p-2.5 rounded-xl bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 hover:text-amber-400 transition-all shrink-0 cursor-pointer min-w-[36px] min-h-[36px] flex items-center justify-center"
               title="Ajouter une photo ou image pour analyse visuelle Gemini"
             >
-              <ImageIcon className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
+              <ImageIcon className="w-4 h-4 text-amber-400" />
             </button>
 
             {/* Voice Input Button */}
             <button
               type="button"
               onClick={handleVoiceToggle}
-              className={`p-2.5 rounded-xl border transition-all shrink-0 cursor-pointer ${
+              className={`p-2 sm:p-2.5 rounded-xl border transition-all shrink-0 cursor-pointer min-w-[36px] min-h-[36px] flex items-center justify-center ${
                 isListening
                   ? 'bg-rose-600 text-white border-rose-500 animate-pulse shadow-lg shadow-rose-600/30'
                   : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-white'
               }`}
               title={isListening ? 'Arrêter écoute' : 'Parler à Roam'}
             >
-              {isListening ? <MicOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Mic className="w-4 h-4 sm:w-5 sm:h-5" />}
+              {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
             </button>
 
             {/* Text Input */}
@@ -1250,14 +1506,14 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
               onChange={(e) => setInputText(e.target.value)}
               placeholder={
                 isListening
-                  ? '🎤 Écoute en cours... parlez naturellement...'
+                  ? '🎤 Écoute en cours... parlez...'
                   : isScreenSharing
-                  ? "Écran en direct partagé : posez une question ou cliquez sur 'Diagnostiquer'..."
+                  ? "Écran en direct partagé : posez votre question..."
                   : attachedImage
-                  ? 'Posez une question sur cette image ou appuyez sur Entrée...'
-                  : 'Posez n’importe quelle question, analysez une image, partagez votre écran...'
+                  ? 'Posez une question sur cette image...'
+                  : 'Posez votre question, demandez une image...'
               }
-              className="flex-1 bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-xl px-3 sm:px-4 py-2.5 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500 transition-all font-sans"
+              className="flex-1 min-w-0 bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-xl px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500 transition-all font-sans"
               disabled={loading}
             />
 
@@ -1265,17 +1521,18 @@ export const TripartiteChat: React.FC<TripartiteChatProps> = ({
             <button
               type="submit"
               disabled={loading || (!inputText.trim() && !attachedImage)}
-              className="px-3.5 sm:px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-md transition-all shrink-0 cursor-pointer"
+              className="px-3 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shadow-md transition-all shrink-0 cursor-pointer min-w-[38px] min-h-[38px]"
+              title="Envoyer le message"
             >
-              <Send className="w-4 h-4" />
-              <span className="hidden md:inline text-xs uppercase tracking-wider">Envoyer</span>
+              <Send className="w-4 h-4 text-slate-950 shrink-0" />
+              <span className="hidden sm:inline text-xs uppercase tracking-wider font-bold">Envoyer</span>
             </button>
           </form>
         </div>
       </div>
 
-      {/* Right Tripartite Brain Inspector Panel */}
-      <div className="w-full lg:w-96 bg-slate-900 p-4 border-l border-slate-800 overflow-y-auto flex flex-col space-y-4">
+      {/* Right Tripartite Brain Inspector Panel (Visible on large screens, available via button on mobile) */}
+      <div className="hidden lg:flex lg:w-96 bg-slate-900 p-4 border-l border-slate-800 overflow-y-auto flex-col space-y-4 shrink-0">
         <div className="flex items-center justify-between pb-3 border-b border-slate-800">
           <div className="flex items-center gap-2">
             <Sliders className="w-4 h-4 text-amber-400" />

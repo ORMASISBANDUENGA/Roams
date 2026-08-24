@@ -1,7 +1,9 @@
 {
   "name": "roams-ai",
+  "description": "ROAM'S.AI — Centre de Contrôle Numérique Souverain avec IA Tripartite & Mémoire Persistante",
   "private": true,
   "version": "1.0.0",
+
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",

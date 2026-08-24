@@ -7,6 +7,9 @@ import {
   getRedirectResult,
   RecaptchaVerifier,
   signInWithPhoneNumber,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signOut,
   onAuthStateChanged,
   User as FirebaseUser,
@@ -18,6 +21,7 @@ import {
   setDoc,
   getDoc,
   getDocFromServer,
+  getDocs,
   collection,
   onSnapshot,
   query,
@@ -39,6 +43,17 @@ export const auth = getAuth(app);
 export const db = firebaseConfig.firestoreDatabaseId
   ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
   : getFirestore(app);
+
+// Re-export Auth helpers
+export {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  onAuthStateChanged,
+  type FirebaseUser,
+  type ConfirmationResult
+};
+
 
 // Google Provider
 export const googleProvider = new GoogleAuthProvider();

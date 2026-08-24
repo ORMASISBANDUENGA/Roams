@@ -1,420 +1,281 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  X,
+  Home,
   MessageSquare,
-  LayoutDashboard,
-  Bot,
-  Database,
-  Shield,
-  Cpu,
-  Sliders,
-  BookOpen,
-  Sparkles,
-  Terminal,
-  VolumeX,
-  Lock,
-  LogOut,
-  History,
-  HardDrive,
-  Cloud,
-  Download,
-  Calendar,
-  Hourglass,
-  Layers,
-  ChevronRight,
-  User,
+  FolderKanban,
+  FileText,
+  Brain,
   Zap,
-  CheckCircle2,
+  Bot,
+  Shield,
+  Smartphone,
+  Sliders,
+  User,
+  Plus,
   Trash2,
-  MessageCircle,
-  Facebook,
-  Info,
+  LogOut,
+  X,
+  ChevronRight,
+  Sparkles,
+  Search
 } from 'lucide-react';
-import { UserIdentity, PersonalityTraits, BubbleModeConfig, EthicalBackdoorState, ChatMessage } from '../types/roam';
+import { AppNavTab, Conversation, UserIdentity } from '../types/roam';
+import { RoamLogoAnimated } from './RoamLogoAnimated';
 
 interface NavigationDrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  activeMode: 'chat' | 'operations';
-  setActiveMode: (mode: 'chat' | 'operations') => void;
-  activeFeature: string;
-  setActiveFeature: (featureId: string) => void;
+  currentTab: AppNavTab;
+  onSelectTab: (tab: AppNavTab) => void;
+  conversations: Conversation[];
+  activeConversationId?: string;
+  onSelectConversation: (conv: Conversation) => void;
+  onNewConversation: () => void;
+  onDeleteConversation: (convId: string) => void;
   user: UserIdentity;
-  personality: PersonalityTraits;
-  bubbleConfig: BubbleModeConfig;
-  setBubbleConfig: React.Dispatch<React.SetStateAction<BubbleModeConfig>>;
-  ethicalState: EthicalBackdoorState;
-  messages: ChatMessage[];
-  onSelectHistoryMessage?: (msg: ChatMessage) => void;
-  onClearHistory?: () => void;
-  onOpenConsole: () => void;
-  onOpenDownloadModal: () => void;
-  onOpenProfileModal: () => void;
-  onOpenManualModal?: () => void;
-  onLockSession: () => void;
   onLogout: () => void;
-  onToggleNode: () => void;
+  onOpenProfile: () => void;
 }
 
 export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
   isOpen,
   onClose,
-  activeMode,
-  setActiveMode,
-  activeFeature,
-  setActiveFeature,
+  currentTab,
+  onSelectTab,
+  conversations = [],
+  activeConversationId,
+  onSelectConversation,
+  onNewConversation,
+  onDeleteConversation,
   user,
-  personality,
-  bubbleConfig,
-  setBubbleConfig,
-  ethicalState,
-  messages = [],
-  onSelectHistoryMessage,
-  onClearHistory,
-  onOpenConsole,
-  onOpenDownloadModal,
-  onOpenProfileModal,
-  onLockSession,
   onLogout,
-  onToggleNode,
+  onOpenProfile,
 }) => {
-  // 15 Sovereign Features definition
-  const sovereignFeatures = [
-    { id: 'dashboard', name: '1. Centre de Contrôle (Cockpit)', icon: LayoutDashboard, category: 'Intelligence', badge: 'Télémétrie' },
-    { id: 'double', name: '2. Le Double Numérique & Autonomie', icon: Bot, category: 'Intelligence', badge: 'Autonome' },
-    { id: 'memory', name: '3. Mémoire Souveraine ZK', icon: Database, category: 'Mémoire', badge: '7 Catégories' },
-    { id: 'security', name: '4. Centre de Sécurité & Clés AES', icon: Shield, category: 'Sécurité', badge: '100% ZK' },
-    { id: 'subagents', name: '5. Sous-Agents & Ruche Spécialisée', icon: Cpu, category: 'Intelligence', badge: '7 Agents' },
-    { id: 'journal', name: '6. Rêve & Journal Cognitif', icon: Calendar, category: 'Mémoire', badge: 'Nocturne' },
-    { id: 'anticipation', name: '7. Anticipation & Découpage', icon: Sparkles, category: 'Intelligence', badge: 'Proactif' },
-    { id: 'manual', name: "8. Manuel d'Utilisation Complet (28 Chapitres)", icon: Info, category: 'Architecture', badge: 'Guide 28p' },
-    { id: 'capsule', name: '9. Capsule Temporelle & Archives', icon: Hourglass, category: 'Mémoire', badge: 'Immuable' },
-    { id: 'bubble', name: '10. Mode Bulle Anti-Distraction', icon: VolumeX, category: 'Sécurité', badge: bubbleConfig.active ? 'Actif' : 'Veille' },
-    { id: 'ethical', name: '11. Porte Éthique & Non-Ingérence', icon: Lock, category: 'Sécurité', badge: 'Audit ZK' },
-    { id: 'console', name: '12. Console CLI & Logs Système', icon: Terminal, category: 'Architecture', badge: 'Temps réel' },
-    { id: 'rewards', name: '13. Niveaux, Trophées & XP', icon: Zap, category: 'Architecture', badge: `Niveau ${user.autonomyLevel}` },
-    { id: 'settings', name: '14. Paramètres & Personnalité', icon: Sliders, category: 'Architecture', badge: personality.ton },
-    { id: 'download', name: "15. Téléchargement & Multi-App", icon: Download, category: 'Architecture', badge: 'V1.0 Pro' },
-    { id: 'terminal', name: "16. Agent Terminal & Commandes PC", icon: Terminal, category: 'Action', badge: 'CLI Runner' },
-    { id: 'calls', name: "17. Agent Téléphonie & Appels Vocaux", icon: MessageCircle, category: 'Action', badge: 'Voix IA' },
-    { id: 'plugins', name: "18. WhatsApp, Facebook & Webhooks", icon: Facebook, category: 'Action', badge: 'Connecteurs' },
-    { id: 'hosting_seo', name: "19. Hébergement & Search Console", icon: HardDrive, category: 'Architecture', badge: 'SEO Google' },
+  const mainNavItems = [
+    { id: 'home' as AppNavTab, label: 'Accueil', icon: Home },
+    { id: 'chat' as AppNavTab, label: 'Chat', icon: MessageSquare },
+    { id: 'projects' as AppNavTab, label: 'Projets', icon: FolderKanban },
+    { id: 'documents' as AppNavTab, label: 'Documents', icon: FileText },
+    { id: 'memory' as AppNavTab, label: 'Mémoire', icon: Brain },
+    { id: 'actions' as AppNavTab, label: 'Actions', icon: Zap },
+    { id: 'agents' as AppNavTab, label: 'Agents', icon: Bot },
   ];
 
-  // Filter messages for history
-  const userMessages = messages.filter((m) => m.sender === 'user').slice(-8).reverse();
+  const secondaryNavItems = [
+    { id: 'privacy' as AppNavTab, label: 'Confidentialité', icon: Shield },
+    { id: 'devices' as AppNavTab, label: 'Appareils', icon: Smartphone },
+    { id: 'settings' as AppNavTab, label: 'Paramètres', icon: Sliders },
+  ];
 
-  const handleNavigateFeature = (featureId: string) => {
-    if (featureId === 'console') {
-      onOpenConsole();
-      onClose();
-      return;
-    }
-    if (featureId === 'download') {
-      onOpenDownloadModal();
-      onClose();
-      return;
-    }
-    if (featureId === 'bubble') {
-      setBubbleConfig((prev) => ({ ...prev, active: !prev.active }));
-      return;
-    }
+  const renderContent = (isMobileDrawer = false) => (
+    <div className="flex flex-col h-full bg-slate-950 text-slate-200 border-r border-slate-800/80 select-none">
+      
+      {/* Brand Header */}
+      <div className="p-4 flex items-center justify-between border-b border-slate-800/80">
+        <div
+          onClick={() => {
+            onSelectTab('home');
+            if (isMobileDrawer) onClose();
+          }}
+          className="flex items-center space-x-3 cursor-pointer group"
+        >
+          <RoamLogoAnimated size="sm" />
+          <div>
+            <span className="font-bold text-sm tracking-wider font-mono text-slate-100 group-hover:text-amber-400 transition-colors">
+              ROAM'S.AI
+            </span>
+            <span className="block text-[10px] text-slate-400 font-medium">Souverain & Privé</span>
+          </div>
+        </div>
 
-    setActiveMode('operations');
-    setActiveFeature(featureId);
-    onClose();
-  };
+        {isMobileDrawer && (
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-900 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
+      </div>
 
-  const handleNavigateChat = () => {
-    setActiveMode('chat');
-    onClose();
-  };
+      {/* New Chat Button */}
+      <div className="p-3 border-b border-slate-800/60">
+        <button
+          onClick={() => {
+            onNewConversation();
+            onSelectTab('chat');
+            if (isMobileDrawer) onClose();
+          }}
+          className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20 transition-all cursor-pointer"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Nouvelle discussion</span>
+        </button>
+      </div>
+
+      {/* Primary Navigation List */}
+      <div className="px-3 py-2 space-y-1">
+        {mainNavItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = currentTab === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => {
+                onSelectTab(item.id);
+                if (isMobileDrawer) onClose();
+              }}
+              className={`w-full flex items-center space-x-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                isActive
+                  ? 'bg-slate-900 text-amber-400 font-bold border border-amber-500/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+              }`}
+            >
+              <Icon className={`w-4 h-4 ${isActive ? 'text-amber-400' : 'text-slate-400'}`} />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* History List */}
+      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1 border-t border-slate-800/60">
+        <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+          <span>Historique récent</span>
+          <span className="text-[10px] text-slate-400 font-mono">{conversations.length}</span>
+        </div>
+
+        {conversations.length === 0 ? (
+          <div className="px-3 py-4 text-xs text-slate-400 italic">
+            Aucune conversation pour l'instant.
+          </div>
+        ) : (
+          conversations.slice(0, 15).map((conv) => {
+            const isSelected = activeConversationId === conv.id && currentTab === 'chat';
+            return (
+              <div
+                key={conv.id}
+                onClick={() => {
+                  onSelectConversation(conv);
+                  onSelectTab('chat');
+                  if (isMobileDrawer) onClose();
+                }}
+                className={`group flex items-center justify-between px-3 py-2 rounded-xl text-xs cursor-pointer transition-all ${
+                  isSelected
+                    ? 'bg-slate-900 text-amber-300 font-medium border border-amber-500/20'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
+                }`}
+              >
+                <div className="flex items-center space-x-2 truncate">
+                  <MessageSquare className="w-3.5 h-3.5 shrink-0 opacity-60" />
+                  <span className="truncate">{conv.title || 'Discussion sans titre'}</span>
+                </div>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteConversation(conv.id);
+                  }}
+                  className="opacity-0 group-hover:opacity-100 p-1 text-slate-500 hover:text-rose-400 transition-opacity"
+                  title="Supprimer la discussion"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Secondary items: Confidentialité, Appareils, Paramètres */}
+      <div className="p-3 border-t border-slate-800/80 space-y-1">
+        {secondaryNavItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = currentTab === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => {
+                onSelectTab(item.id);
+                if (isMobileDrawer) onClose();
+              }}
+              className={`w-full flex items-center space-x-3 px-3 py-1.5 rounded-lg text-xs transition-all ${
+                isActive
+                  ? 'bg-slate-900 text-amber-400 font-semibold'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* User Profile Footer */}
+      <div className="p-3 border-t border-slate-800 bg-slate-900/50 flex items-center justify-between">
+        <div
+          onClick={() => {
+            onOpenProfile();
+            if (isMobileDrawer) onClose();
+          }}
+          className="flex items-center space-x-2.5 cursor-pointer truncate"
+        >
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-xs font-bold text-slate-950 shrink-0">
+            {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+          </div>
+          <div className="truncate">
+            <div className="text-xs font-semibold text-slate-200 truncate">{user.name || 'Mon Profil'}</div>
+            <div className="text-[10px] text-slate-500 truncate">@{user.pseudonym || 'user'}</div>
+          </div>
+        </div>
+
+        <button
+          onClick={onLogout}
+          className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-slate-800 transition-colors"
+          title="Se déconnecter"
+        >
+          <LogOut className="w-4 h-4" />
+        </button>
+      </div>
+
+    </div>
+  );
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex">
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm cursor-pointer"
-          />
+    <>
+      {/* Desktop Persistent Sidebar (Fixed on lg screens) */}
+      <aside className="hidden lg:flex w-64 h-screen shrink-0 flex-col">
+        {renderContent(false)}
+      </aside>
 
-          {/* Drawer Menu */}
-          <motion.aside
-            initial={{ x: '-100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '-100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-            className="relative w-full max-w-sm sm:max-w-md bg-slate-900 border-r border-slate-800 text-slate-100 flex flex-col h-full shadow-2xl z-10"
-          >
-            {/* Header of Drawer */}
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
-              <div className="flex items-center gap-3">
-                <img
-                  src="/icon.jpg"
-                  alt="ROAM'S.ai"
-                  className="w-10 h-10 rounded-xl object-cover border border-amber-500/40 shadow-md"
-                  referrerPolicy="no-referrer"
-                />
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-amber-400 font-mono text-sm tracking-wider">ROAM’S.AI V1.0</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono border border-emerald-500/30">
-                      SOUVERAIN
-                    </span>
-                  </div>
-                  <div className="text-xs text-slate-400 font-mono">
-                    Architecte : <span className="text-slate-200 font-semibold">{user.name}</span>
-                  </div>
-                </div>
-              </div>
+      {/* Mobile Drawer (Modal on small screens) */}
+      <AnimatePresence>
+        {isOpen && (
+          <div className="lg:hidden fixed inset-0 z-50 flex">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={onClose}
+              className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm"
+            />
 
-              <button
-                onClick={onClose}
-                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-100 transition cursor-pointer"
-                title="Fermer le menu"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Main Navigation Modes (Chatbot vs Hub 15 Piliers) */}
-            <div className="p-3 bg-slate-900/90 border-b border-slate-800 space-y-2">
-              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-400 px-1 font-semibold">
-                Sélecteur de Mode Principal
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={handleNavigateChat}
-                  className={`flex flex-col items-start p-3 rounded-xl border transition-all text-left cursor-pointer ${
-                    activeMode === 'chat'
-                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-md font-semibold'
-                      : 'bg-slate-800/80 text-slate-300 border-slate-700/80 hover:bg-slate-800 hover:border-slate-600'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <MessageSquare className={`w-4 h-4 ${activeMode === 'chat' ? 'text-amber-400' : 'text-slate-400'}`} />
-                    <span className="text-xs font-bold font-mono">1. Chatbot Hub</span>
-                  </div>
-                  <span className="text-[10px] text-slate-400 line-clamp-2">
-                    IA Tripartite, Vision, Partage d'écran en direct & Génération.
-                  </span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    setActiveMode('operations');
-                    setActiveFeature('dashboard');
-                    onClose();
-                  }}
-                  className={`flex flex-col items-start p-3 rounded-xl border transition-all text-left cursor-pointer ${
-                    activeMode === 'operations'
-                      ? 'bg-purple-500/20 text-purple-300 border-purple-500/50 shadow-md font-semibold'
-                      : 'bg-slate-800/80 text-slate-300 border-slate-700/80 hover:bg-slate-800 hover:border-slate-600'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <LayoutDashboard className={`w-4 h-4 ${activeMode === 'operations' ? 'text-purple-400' : 'text-slate-400'}`} />
-                    <span className="text-xs font-bold font-mono">2. Hub Opérations</span>
-                  </div>
-                  <span className="text-[10px] text-slate-400 line-clamp-2">
-                    Toutes les 15 fonctionnalités, Le Double, Mémoire & Sécurité.
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            {/* Scrollable Content: 15 Features + Message History */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-4">
-              {/* 15 Sovereign Features list */}
-              <div>
-                <div className="flex items-center justify-between px-1 mb-2">
-                  <span className="text-[11px] font-mono uppercase tracking-wider text-slate-400 font-bold">
-                    💎 Les 15 Fonctionnalités Souveraines
-                  </span>
-                  <span className="text-[10px] text-amber-400 font-mono bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
-                    15/15 Prêts
-                  </span>
-                </div>
-
-                <div className="space-y-1">
-                  {sovereignFeatures.map((feat) => {
-                    const Icon = feat.icon;
-                    const isCurrent = activeMode === 'operations' && activeFeature === feat.id;
-
-                    return (
-                      <button
-                        key={feat.id}
-                        onClick={() => handleNavigateFeature(feat.id)}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-mono transition-all text-left cursor-pointer group ${
-                          isCurrent
-                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-semibold'
-                            : 'text-slate-300 hover:text-slate-100 hover:bg-slate-800/70 border border-transparent'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <Icon className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-amber-400' : 'text-slate-400 group-hover:text-amber-300'}`} />
-                          <span className="truncate">{feat.name}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                          <span
-                            className={`text-[9px] px-1.5 py-0.5 rounded font-mono ${
-                              isCurrent
-                                ? 'bg-amber-500/30 text-amber-200'
-                                : 'bg-slate-800 text-slate-400 group-hover:text-slate-300'
-                            }`}
-                          >
-                            {feat.badge}
-                          </span>
-                          <ChevronRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-300" />
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Message History Section */}
-              <div className="pt-3 border-t border-slate-800/80">
-                <div className="flex items-center justify-between px-1 mb-2">
-                  <div className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-slate-400 font-bold">
-                    <History className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Historique des Messages</span>
-                  </div>
-                  {userMessages.length > 0 && onClearHistory && (
-                    <button
-                      onClick={onClearHistory}
-                      className="text-[10px] text-slate-500 hover:text-red-400 flex items-center gap-1 font-mono transition cursor-pointer"
-                      title="Effacer l'historique"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      <span>Vider</span>
-                    </button>
-                  )}
-                </div>
-
-                {userMessages.length === 0 ? (
-                  <div className="px-3 py-2 text-xs text-slate-500 font-mono italic bg-slate-950/40 rounded-lg border border-slate-800/50">
-                    Aucune question récente enregistrée.
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    {userMessages.map((msg) => (
-                      <button
-                        key={msg.id}
-                        onClick={() => {
-                          if (onSelectHistoryMessage) {
-                            onSelectHistoryMessage(msg);
-                          }
-                          setActiveMode('chat');
-                          onClose();
-                        }}
-                        className="w-full text-left p-2 rounded-lg bg-slate-950/40 hover:bg-slate-800 border border-slate-800/60 hover:border-slate-700 text-slate-300 hover:text-amber-300 text-xs font-mono transition flex items-center justify-between gap-2 cursor-pointer group"
-                      >
-                        <span className="truncate max-w-[240px]">"{msg.text}"</span>
-                        <span className="text-[9px] text-slate-500 shrink-0 font-sans">{msg.timestamp}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Bottom Controls: Node Toggle + Profile + Logout Bar */}
-            <div className="p-3 border-t border-slate-800 bg-slate-950 space-y-2">
-              <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-                {/* Node Toggle */}
-                <button
-                  onClick={onToggleNode}
-                  className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 flex items-center justify-center gap-1.5 transition cursor-pointer"
-                  title="Basculer Nœud Local / Miroir Cloud"
-                >
-                  {user.nodeType === 'local' ? (
-                    <>
-                      <HardDrive className="w-3.5 h-3.5 text-emerald-400" />
-                      <span className="text-[11px]">Nœud Local</span>
-                    </>
-                  ) : (
-                    <>
-                      <Cloud className="w-3.5 h-3.5 text-amber-400" />
-                      <span className="text-[11px]">Miroir Cloud</span>
-                    </>
-                  )}
-                </button>
-
-                {/* Profile Modal */}
-                <button
-                  onClick={() => {
-                    onOpenProfileModal();
-                    onClose();
-                  }}
-                  className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 flex items-center justify-center gap-1.5 transition cursor-pointer"
-                >
-                  <User className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="text-[11px]">Profil & Clés</span>
-                </button>
-              </div>
-
-              {/* Action Logout / Lock Session */}
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => {
-                    onLockSession();
-                    onClose();
-                  }}
-                  className="w-full py-2 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-slate-100 font-mono text-xs font-medium flex items-center justify-center gap-1.5 transition cursor-pointer"
-                >
-                  <Lock className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Verrouiller</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    onLogout();
-                    onClose();
-                  }}
-                  className="w-full py-2 px-3 rounded-lg bg-red-950/40 hover:bg-red-900/60 border border-red-800/60 hover:border-red-700 text-red-300 hover:text-red-200 font-mono text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer shadow-sm"
-                >
-                  <LogOut className="w-3.5 h-3.5 text-red-400" />
-                  <span>Déconnexion</span>
-                </button>
-              </div>
-
-              {/* Social Channels: WhatsApp & Facebook (Phone number is strictly invisible) */}
-              <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between px-1">
-                <span className="text-[10px] font-mono text-slate-500">Canaux Directs</span>
-                <div className="flex items-center gap-2">
-                  <a
-                    href="https://wa.me/243896082244"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Contacter sur WhatsApp"
-                    aria-label="WhatsApp"
-                    className="p-1.5 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-all hover:scale-105"
-                  >
-                    <MessageCircle className="w-3.5 h-3.5" />
-                  </a>
-                  <a
-                    href="https://www.facebook.com/oromasis.banduenga"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Profil Facebook"
-                    aria-label="Facebook"
-                    className="p-1.5 rounded-md bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 transition-all hover:scale-105"
-                  >
-                    <Facebook className="w-3.5 h-3.5" />
-                  </a>
-                </div>
-              </div>
-            </div>
-          </motion.aside>
-        </div>
-      )}
-    </AnimatePresence>
+            {/* Slide-out drawer */}
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="relative w-72 max-w-[85vw] h-full shadow-2xl z-10"
+            >
+              {renderContent(true)}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </>
   );
 };

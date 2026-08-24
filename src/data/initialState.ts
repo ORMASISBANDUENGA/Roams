@@ -16,18 +16,213 @@ import {
   SecurityCenterData,
   DoubleState,
   RewardState,
+  ProjectItem,
+  DocumentFile,
+  DeviceSession,
+  CustomAgentConfig,
+  PrivacySettings,
+  UsageQuota,
+  Conversation,
 } from '../types/roam';
 
 export const initialUserIdentity: UserIdentity = {
-  name: 'Oromasis',
-  pseudonym: 'Masis',
-  email: 'masisbanduenga@gmail.com',
+  name: '',
+  pseudonym: '',
+  email: '',
   avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80',
   autonomyLevel: 3,
   nodeType: 'local',
   personalityPreset: 'direct',
-  lastSessionTime: 'Hier, 19:42',
+  lastSessionTime: 'Aujourd’hui',
   onboardingCompleted: true,
+};
+
+export const initialConversations: Conversation[] = [];
+
+export const initialProjects: ProjectItem[] = [
+  {
+    id: 'proj-1',
+    name: 'SQL Quest',
+    category: 'Application',
+    description: 'Simulateur et jeu d’apprentissage des bases de données relationnelles et requêtes SQL.',
+    conversationsCount: 12,
+    documentsCount: 4,
+    instructions: 'Optimiser pour SQLite & PostgreSQL, typage TypeScript strict, architecture sans surcharge.',
+    tasksCount: 3,
+    createdAt: 'Il y a 3 jours',
+    status: 'active',
+  },
+  {
+    id: 'proj-2',
+    name: 'Institut Lisanga',
+    category: 'ERP Scolaire',
+    description: 'Système complet de gestion administrative, académique et suivi des effectifs.',
+    conversationsCount: 8,
+    documentsCount: 6,
+    instructions: 'Respecter les normes scolaires, modules déconnectés prioritaires, export PDF automatisé.',
+    tasksCount: 5,
+    createdAt: 'Il y a 1 semaine',
+    status: 'active',
+  },
+];
+
+export const initialDocuments: DocumentFile[] = [
+  {
+    id: 'doc-1',
+    name: 'Cahier_des_Charges_ROAM_v1.pdf',
+    size: '2.4 MB',
+    type: 'pdf',
+    uploadedAt: 'Aujourd’hui à 09:15',
+    summary: 'Spécifications complètes de l’architecture souveraine, moteur de chat tripartite et modules locaux.',
+    tags: ['Architecture', 'Specs', 'Souveraineté'],
+  },
+  {
+    id: 'doc-2',
+    name: 'Schema_Database_SQLQuest.sql',
+    size: '142 KB',
+    type: 'code',
+    uploadedAt: 'Hier à 16:40',
+    summary: 'Schéma DDL avec 14 tables, index composites et contraintes d’intégrité référentielle.',
+    tags: ['Database', 'SQL', 'Backend'],
+  },
+  {
+    id: 'doc-3',
+    name: 'Synthese_Institut_Lisanga.docx',
+    size: '880 KB',
+    type: 'word',
+    uploadedAt: '18 Août 2026',
+    summary: 'Rapport d’évaluation des besoins pour 1 200 élèves et 65 enseignants.',
+    tags: ['ERP', 'Éducation', 'Rapport'],
+  },
+];
+
+export const initialDevices: DeviceSession[] = [
+  {
+    id: 'dev-1',
+    name: 'Android Mobile',
+    type: 'android',
+    location: 'Kinshasa, RDC',
+    lastActive: 'Actif maintenant',
+    ipMasked: '197.157.***.***',
+    isCurrent: true,
+  },
+  {
+    id: 'dev-2',
+    name: 'Poste de travail Windows',
+    type: 'windows',
+    location: 'Kinshasa, RDC',
+    lastActive: 'Aujourd’hui à 08:30',
+    ipMasked: '105.235.***.***',
+    isCurrent: false,
+  },
+  {
+    id: 'dev-3',
+    name: 'MacBook Pro / iPhone',
+    type: 'apple',
+    location: 'Paris, France (VPN)',
+    lastActive: 'Hier à 22:15',
+    ipMasked: '82.65.***.***',
+    isCurrent: false,
+  },
+];
+
+export const initialCustomAgents: CustomAgentConfig[] = [
+  {
+    id: 'agent-1',
+    name: 'ROAM',
+    role: 'Assistant Général Souverain',
+    description: 'Intelligence générale tout-terrain, analyse documentaire, code et recherche web.',
+    icon: '⚡',
+    instructions: 'Réponds avec concision, clarté, sans verbiage inutile. Fournis du code typé et complet.',
+    memoryAllowed: true,
+    permissions: {
+      readProjects: true,
+      readDocs: true,
+      useInternet: true,
+      sendEmails: false,
+      editFiles: false,
+      makePurchases: false,
+    },
+    actionsCount: 142,
+    status: 'active',
+  },
+  {
+    id: 'agent-2',
+    name: 'SQL & Database Expert',
+    role: 'Architecte de Données',
+    description: 'Spécialiste de l’optimisation de requêtes SQL, modélisation DDL et indexation haute performance.',
+    icon: '💾',
+    instructions: 'Analyse les plans d’exécution EXPLAIN, privilégie les index composites et la normalisation 3NF.',
+    memoryAllowed: true,
+    permissions: {
+      readProjects: true,
+      readDocs: true,
+      useInternet: true,
+      sendEmails: false,
+      editFiles: true,
+      makePurchases: false,
+    },
+    actionsCount: 68,
+    status: 'active',
+  },
+  {
+    id: 'agent-3',
+    name: 'Développeur Full-Stack',
+    role: 'Ingénieur Logiciel',
+    description: 'Conception de composants React modernes, APIs Node.js/Express typées et algorithmes propres.',
+    icon: '💻',
+    instructions: 'Écris du code TypeScript moderne sans any, utilise Tailwind CSS épuré et gère tous les cas d’erreur.',
+    memoryAllowed: true,
+    permissions: {
+      readProjects: true,
+      readDocs: true,
+      useInternet: true,
+      sendEmails: false,
+      editFiles: true,
+      makePurchases: false,
+    },
+    actionsCount: 94,
+    status: 'active',
+  },
+  {
+    id: 'agent-4',
+    name: 'Rédacteur & Synthèse',
+    role: 'Créateur de Contenu',
+    description: 'Rédaction d’emails percutants, rapports synthétiques et revues de documentation.',
+    icon: '✍️',
+    instructions: 'Style sobre, professionnel, structuré en listes et tableaux clairs. Zéro jargon inutile.',
+    memoryAllowed: true,
+    permissions: {
+      readProjects: true,
+      readDocs: true,
+      useInternet: true,
+      sendEmails: false,
+      editFiles: false,
+      makePurchases: false,
+    },
+    actionsCount: 31,
+    status: 'active',
+  },
+];
+
+export const initialPrivacySettings: PrivacySettings = {
+  memoryEnabled: true,
+  historyEnabled: true,
+  modelImprovement: false,
+  personalization: true,
+  strictLocalMode: false,
+  telemetryBlocked: true,
+};
+
+export const initialUsageQuota: UsageQuota = {
+  messagesUsed: 245,
+  messagesLimit: 1000,
+  imagesUsed: 12,
+  imagesLimit: 50,
+  searchUsed: 38,
+  searchLimit: 200,
+  daysRemaining: 14,
+  plan: 'Pro',
 };
 
 export const autonomyDefinitions: AutonomyDefinition[] = [
@@ -72,8 +267,8 @@ export const initialSovereignMemories: SovereignMemoryItem[] = [
   {
     id: 'mem-1',
     category: 'Identité',
-    title: 'Identité & Rôle de l’Architecte',
-    content: 'Oromasis (Masis), créateur et architecte système de ROAM’S.AI. Préfère un style direct, sans détour et hautement technique.',
+    title: 'Identité & Rôle',
+    content: 'Utilisateur souverain de ROAM’S.AI. Préfère un style direct, sans détour et hautement technique.',
     confidence: 1.0,
     lastUpdated: 'Aujourd’hui',
     source: 'Configuration Système',
@@ -90,8 +285,8 @@ export const initialSovereignMemories: SovereignMemoryItem[] = [
   {
     id: 'mem-3',
     category: 'Projets',
-    title: 'Projet Phare : SQL Quest & ROAM V1.0',
-    content: 'SQL Quest est un simulateur de bases de données gamifié. ROAM V1.0 constitue le cockpit souverain centralisant la gestion.',
+    title: 'Projet Central : ROAM’S.AI',
+    content: 'ROAM’S.AI constitue le centre de contrôle souverain centralisant la gestion, le chat multimodal et les outils autonomes.',
     confidence: 0.98,
     lastUpdated: 'Ce matin',
     source: 'Journal & Fichiers',
@@ -144,15 +339,15 @@ export const initialDoubleState: DoubleState = {
       id: 'act-1',
       title: 'Réponse email : Validation du livrable V1.0',
       category: 'email',
-      description: 'Brouillon prêt respectant ton style direct et concis.',
+      description: 'Brouillon prêt respectant un style direct et concis.',
       confidence: 0.94,
       preparedTime: 'Il y a 10 min',
-      payloadPreview: 'Bonjour Marc, Le centre de contrôle ROAM V1.0 avec nœud local actif est validé. Déploiement prévu à 14h. Bien à toi, Oromasis.',
+      payloadPreview: 'Bonjour Marc, Le centre de contrôle ROAM V1.0 avec nœud local actif est validé. Déploiement prévu à 14h. Bien cordialement.',
       status: 'pending',
     },
     {
       id: 'act-2',
-      title: 'Patch SQL : Index composite sur logs_activity',
+      title: 'Optimisation Base de données : Index composite sur logs_activity',
       category: 'code',
       description: 'Accélération estimée de +64% sur les requêtes d’audit.',
       confidence: 0.91,
@@ -174,7 +369,7 @@ export const initialDoubleState: DoubleState = {
   backgroundLogs: [
     '10:14  Analyse des 14 tâches en cours... Aucune dérive.',
     '10:02  Synchronisation mémoire souveraine : 7 entrées indexées.',
-    '09:48  Pré-génération du patch SQL pour validation.',
+    '09:48  Pré-génération de l’optimisation pour validation.',
     '09:30  Surveillance réseau : 0 fuite, nœud local hermétique.',
   ],
 };
@@ -212,58 +407,10 @@ export const initialPersonality: PersonalityTraits = {
   formalite: 0.6,
   proactivite: 0.8,
   longueur: 0.4,
-  lastEvolutionNote: 'Calibré pour l’efficacité de l’Architecte Oromasis.',
+  lastEvolutionNote: 'Calibré pour l’efficacité et la précision.',
 };
 
-export const initialMessages: ChatMessage[] = [
-  {
-    id: 'msg-init-1',
-    sender: 'roam',
-    text: `⚡ **ROAM’S.AI V1.0 — CENTRE DE CONTRÔLE PRÊT**
-
-Bonjour Oromasis. Votre environnement est sous votre contrôle total.
-
-• **Nœud Local** : 🟢 Actif & Souverain
-• **Cerveau Tripartite** : 🧠 S1 (95ms), S2 (Logique), S3 (Méta-Surveillance)
-• **Le Double** : 🤖 Actif (3 actions préparées, 14 tâches surveillées)
-• **Niveau d'Autonomie** : 🛡️ Niveau 3 (Préparation active)
-
-Que souhaitez-vous inspecter ou exécuter ?`,
-    timestamp: '09:23',
-    modeUsed: 'Système Tripartite (V1.0)',
-    suggestedActions: [
-      'Analyse ce projet et trouve les blocages',
-      'Prépare mon travail pour demain',
-      'Afficher les actions préparées par Le Double',
-      'Consulter la mémoire souveraine',
-    ],
-    tripartiteData: {
-      system1: {
-        latencyMs: 95,
-        confidence: 0.99,
-        instinctSummary: 'Session prête. Aucune alerte.',
-        quickAnswer: 'Cockpit opérationnel.',
-      },
-      system2: {
-        reasoningSteps: [
-          'Vérification de l’intégrité du Nœud Local',
-          'Synchronisation de la Mémoire Souveraine (7 entrées)',
-          'Activation du Double avec respect de l’Autonomie Niveau 3',
-        ],
-        detailedResponse: 'Tous les systèmes sont synchronisés. Les agents spécialisés sont en attente d’instructions.',
-        suggestedActions: ['Voir Le Double', 'Ouvrir les Outils', 'Inspecter la Sécurité'],
-      },
-      system3: {
-        qualityScore: 100,
-        metaCritique: 'Alignement absolu avec les principes de souveraineté numérique.',
-        learningNote: 'Profil Oromasis actif : concision et actions concrètes.',
-      },
-      finalResponse: 'ROAM V1.0 prêt.',
-      moodDetected: 'focus',
-      recommendedRewardXp: 50,
-    },
-  },
-];
+export const initialMessages: ChatMessage[] = [];
 
 export const initialJournal: JournalEntry[] = [
   {
@@ -282,7 +429,7 @@ export const initialJournal: JournalEntry[] = [
     timestamp: '2026-08-20T08:30:00',
     timeLabel: '08:30',
     type: 'code',
-    title: 'Revue d’architecture SQL Quest',
+    title: 'Revue d’architecture et base de données',
     description: 'Optimisation des index et validation de la structure de données.',
     durationMinutes: 45,
     mood: 'focus',
@@ -322,7 +469,7 @@ export const initialDream: DreamState = {
   },
   subconsciousInsights: [
     'Tu atteins un état de flux optimal lorsque Le Double gère les micro-décisions.',
-    'Les requêtes SQL Quest sont 64% plus rapides depuis la mise en place de l’index.',
+    'Les requêtes de données sont 64% plus rapides depuis la mise en place de l’index.',
     'La séparation claire Nœud Local vs Cloud renforce la confiance opérationnelle.',
   ],
   optimizations: [
@@ -332,11 +479,11 @@ export const initialDream: DreamState = {
   ],
   tomorrowSchedule: [
     { time: '09:00 - 11:00', title: 'Travail profond : Déploiement ROAM V1.0', priority: 'Haute' },
-    { time: '11:00 - 11:45', title: 'Revue projet SQL Quest avec l’équipe', priority: 'Moyenne' },
+    { time: '11:00 - 11:45', title: 'Revue projet avec l’équipe', priority: 'Moyenne' },
     { time: '14:00 - 15:30', title: 'Tests de charge & résilience hors-ligne', priority: 'Haute' },
     { time: '16:00 - 17:00', title: 'Validation des actions du Double', priority: 'Normale' },
   ],
-  poeticGreeting: '🌙 Nuit productive pour votre double numérique. Votre café virtuel est servi ☕. Bonne session Oromasis !',
+  poeticGreeting: '🌙 Nuit productive pour votre double numérique. Votre café virtuel est servi ☕. Bonne session !',
   virtualCoffeeServed: true,
 };
 

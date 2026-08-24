@@ -2,28 +2,38 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import {
   User,
-  Brain,
-  Database,
-  HardDrive,
-  Bell,
-  Shield,
   Sliders,
+  Sparkles,
+  Shield,
+  Palette,
+  FlaskConical,
+  CreditCard,
   Check,
   Save,
-  Trash2,
-  Cloud,
   Moon,
-  Volume2
+  Sun,
+  Globe,
+  Mic,
+  Cpu,
+  Fingerprint,
+  Smartphone,
+  Lock,
+  Zap,
+  Bot,
+  Eye,
+  Key
 } from 'lucide-react';
-import { UserIdentity, PersonalityTraits, AutonomyLevel } from '../types/roam';
-import { autonomyDefinitions } from '../data/initialState';
+import { UserIdentity, PersonalityTraits, UsageQuota } from '../types/roam';
 
 interface SettingsCenterProps {
   user: UserIdentity;
   setUser: React.Dispatch<React.SetStateAction<UserIdentity>>;
   personality: PersonalityTraits;
   setPersonality: React.Dispatch<React.SetStateAction<PersonalityTraits>>;
+  quota: UsageQuota;
   onSaveNotification: () => void;
+  onOpenDevices?: () => void;
+  onOpenPrivacy?: () => void;
 }
 
 export const SettingsCenter: React.FC<SettingsCenterProps> = ({
@@ -31,356 +41,389 @@ export const SettingsCenter: React.FC<SettingsCenterProps> = ({
   setUser,
   personality,
   setPersonality,
+  quota,
   onSaveNotification,
+  onOpenDevices,
+  onOpenPrivacy,
 }) => {
-  const [activeCategory, setActiveCategory] = useState<'compte' | 'ia' | 'memoire' | 'systeme' | 'confidentialite'>('ia');
-  const [localName, setLocalName] = useState(user.name);
-  const [localPseudonym, setLocalPseudonym] = useState(user.pseudonym);
-  const [localEmail, setLocalEmail] = useState(user.email);
-  const [memoryEnabled, setMemoryEnabled] = useState(true);
-  const [voiceVolume, setVoiceVolume] = useState(80);
+  const [activeTab, setActiveTab] = useState<'compte' | 'apparence' | 'ia' | 'securite' | 'confidentialite' | 'lab'>('compte');
   const [savedToast, setSavedToast] = useState(false);
 
-  const categories = [
-    { id: 'compte', label: 'Compte & Profil', icon: User },
-    { id: 'ia', label: 'IA & Autonomie', icon: Brain },
-    { id: 'memoire', label: 'Mémoire Souveraine', icon: Database },
-    { id: 'systeme', label: 'Système (Local/Cloud)', icon: HardDrive },
-    { id: 'confidentialite', label: 'Confidentialité & Sons', icon: Shield },
+  // Local state
+  const [name, setName] = useState(user.name);
+  const [email, setEmail] = useState(user.email);
+  const [language, setLanguage] = useState('fr');
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [aiEngine, setAiEngine] = useState<'auto' | 'flash' | 'reasoning' | 'vision'>('auto');
+  const [voiceGender, setVoiceGender] = useState<'femme' | 'homme'>('femme');
+  const [voiceSpeed, setVoiceSpeed] = useState(1.0);
+
+  // Lab features toggles
+  const [labDoubleEnabled, setLabDoubleEnabled] = useState(true);
+  const [labContinuousScreen, setLabContinuousScreen] = useState(false);
+  const [labSovereignKey, setLabSovereignKey] = useState(true);
+  const [labEthicalSandbox, setLabEthicalSandbox] = useState(true);
+
+  const tabs = [
+    { id: 'compte', label: 'Compte & Forfait', icon: User },
+    { id: 'apparence', label: 'Apparence & Langue', icon: Palette },
+    { id: 'ia', label: 'Moteur IA & Voix', icon: Sparkles },
+    { id: 'securite', label: 'Sécurité & Accès', icon: Shield },
+    { id: 'confidentialite', label: 'Confidentialité', icon: Lock },
+    { id: 'lab', label: 'Laboratoire Expérimental', icon: FlaskConical },
   ];
 
   const handleSave = () => {
     setUser((prev) => ({
       ...prev,
-      name: localName,
-      pseudonym: localPseudonym,
-      email: localEmail,
+      name,
+      email,
     }));
     setSavedToast(true);
     onSaveNotification();
-    setTimeout(() => setSavedToast(false), 3000);
+    setTimeout(() => setSavedToast(false), 2500);
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12 font-sans">
-      {/* Header */}
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900/90 to-amber-950/20 border border-slate-800 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-mono text-amber-400 mb-1">
-            <Sliders className="w-4 h-4" />
-            <span>CONFIGURATION SYSTÈME V1.0</span>
+    <div className="flex-1 overflow-y-auto bg-slate-950 text-slate-100 p-4 md:p-8">
+      <div className="max-w-5xl mx-auto space-y-6">
+        
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-100 flex items-center space-x-3">
+              <Sliders className="w-7 h-7 text-amber-400" />
+              <span>Paramètres</span>
+            </h1>
+            <p className="text-sm text-slate-400 mt-1">
+              Personnalisez votre expérience, vos moteurs d'IA, votre sécurité et vos quotas.
+            </p>
           </div>
-          <h1 className="text-2xl font-bold font-mono text-slate-100">
-            Paramètres du Centre de Contrôle
-          </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Gérez vos règles de délégation, les moteurs IA, l'autonomie et le stockage souverain.
-          </p>
+
+          <button
+            onClick={handleSave}
+            className="flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20 transition-all cursor-pointer"
+          >
+            <Save className="w-4 h-4" />
+            <span>{savedToast ? 'Enregistré ✓' : 'Enregistrer'}</span>
+          </button>
         </div>
 
-        <button
-          onClick={handleSave}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs font-mono tracking-wide transition-all shadow-[0_0_15px_rgba(245,158,11,0.25)] cursor-pointer self-start md:self-auto"
-        >
-          <Save className="w-4 h-4" />
-          <span>{savedToast ? 'ENREGISTRÉ ✓' : 'ENREGISTRER LES MODIFICATIONS'}</span>
-        </button>
-      </div>
-
-      {/* Main Grid: Sidebar + Content */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-        {/* Navigation Sidebar */}
-        <div className="md:col-span-4 space-y-2">
-          {categories.map((cat) => {
-            const Icon = cat.icon;
-            const isActive = activeCategory === cat.id;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id as any)}
-                className={`w-full flex items-center gap-3 p-3.5 rounded-xl border font-mono text-xs transition-all cursor-pointer text-left ${
-                  isActive
-                    ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 font-bold shadow-[0_0_12px_rgba(245,158,11,0.15)]'
-                    : 'bg-slate-900/60 border-slate-800 hover:bg-slate-800/80 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{cat.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Setting Panel */}
-        <div className="md:col-span-8 p-6 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-6">
-          {/* COMPTE */}
-          {activeCategory === 'compte' && (
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold font-mono text-slate-100 pb-2 border-b border-slate-800">
-                Profil &amp; Identité Souveraine
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-mono text-slate-400 mb-1">Nom complet</label>
-                  <input
-                    type="text"
-                    value={localName}
-                    onChange={(e) => setLocalName(e.target.value)}
-                    className="w-full p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-200 font-mono focus:border-amber-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-mono text-slate-400 mb-1">Pseudonyme court</label>
-                  <input
-                    type="text"
-                    value={localPseudonym}
-                    onChange={(e) => setLocalPseudonym(e.target.value)}
-                    className="w-full p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-200 font-mono focus:border-amber-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono text-slate-400 mb-1">Identifiant e-mail</label>
-                <input
-                  type="email"
-                  value={localEmail}
-                  onChange={(e) => setLocalEmail(e.target.value)}
-                  className="w-full p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-200 font-mono focus:border-amber-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 text-xs font-mono text-slate-400 space-y-1">
-                <div className="text-slate-200 font-semibold">Sessions actives</div>
-                <div>1 session locale sécurisée (Clé matérielle autorisée)</div>
-              </div>
-            </div>
-          )}
-
-          {/* IA & AUTONOMIE */}
-          {activeCategory === 'ia' && (
-            <div className="space-y-5">
-              <h3 className="text-sm font-bold font-mono text-slate-100 pb-2 border-b border-slate-800">
-                Configuration de l'IA &amp; Degré d'Autonomie
-              </h3>
-
-              {/* Autonomie Level Selector */}
-              <div>
-                <label className="block text-xs font-mono text-slate-400 mb-2">
-                  Niveau d'Autonomie de ROAM (1 à 5)
-                </label>
-                <div className="space-y-2">
-                  {autonomyDefinitions.map((def) => {
-                    const isSelected = user.autonomyLevel === def.level;
-                    return (
-                      <button
-                        key={def.level}
-                        onClick={() => setUser((prev) => ({ ...prev, autonomyLevel: def.level }))}
-                        className={`w-full p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                          isSelected
-                            ? 'bg-amber-500/15 border-amber-500 text-slate-100'
-                            : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-mono text-xs font-bold text-slate-200">
-                            {def.title}
-                          </span>
-                          {isSelected && <Check className="w-4 h-4 text-amber-400 stroke-[3]" />}
-                        </div>
-                        <p className="text-[11px] text-slate-400 mt-1">{def.description}</p>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Personality Sliders */}
-              <div className="space-y-3 pt-3 border-t border-slate-800">
-                <label className="block text-xs font-mono text-slate-400 mb-1">
-                  Traits de Personnalité &amp; Proactivité
-                </label>
-
-                <div className="space-y-2 text-xs font-mono">
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-300">Humour / Énergie</span>
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.1"
-                      value={personality.humour}
-                      onChange={(e) => setPersonality((p) => ({ ...p, humour: parseFloat(e.target.value) }))}
-                      className="accent-amber-500 w-36"
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-300">Proactivité du Double</span>
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.1"
-                      value={personality.proactivite}
-                      onChange={(e) => setPersonality((p) => ({ ...p, proactivite: parseFloat(e.target.value) }))}
-                      className="accent-amber-500 w-36"
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-300">Concision vs Détail</span>
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.1"
-                      value={personality.longueur}
-                      onChange={(e) => setPersonality((p) => ({ ...p, longueur: parseFloat(e.target.value) }))}
-                      className="accent-amber-500 w-36"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Moteurs & Clés IA (Gemini & ChatGPT) */}
-              <div className="space-y-3 pt-3 border-t border-slate-800">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-bold text-slate-200">
-                    Moteur IA &amp; Intégration ChatGPT / OpenAI
-                  </span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    Multi-Moteur Prêt
-                  </span>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
-                  <label className="block text-[11px] font-mono text-slate-400">
-                    Clé API OpenAI / ChatGPT (Optionnel) :
-                  </label>
-                  <input
-                    type="password"
-                    placeholder="sk-proj-..."
-                    defaultValue={localStorage.getItem('roam_openai_key') || ''}
-                    onChange={(e) => localStorage.setItem('roam_openai_key', e.target.value)}
-                    className="w-full p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-xs font-mono text-emerald-300 focus:border-amber-500 focus:outline-none"
-                  />
-                  <p className="text-[10px] text-slate-500 font-mono">
-                    Permet d'interroger directement ChatGPT (GPT-4o) en parallèle du Cerveau Tripartite Gemini.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* MÉMOIRE */}
-          {activeCategory === 'memoire' && (
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold font-mono text-slate-100 pb-2 border-b border-slate-800">
-                Gestion de la Mémoire Souveraine
-              </h3>
-
-              <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-950/60 border border-slate-800">
-                <div>
-                  <div className="text-xs font-mono font-bold text-slate-200">Indexation Mémoire Active</div>
-                  <div className="text-[11px] text-slate-400">Permet à ROAM de retenir vos projets et préférences</div>
-                </div>
+        {/* Layout: Vertical Navigation Tabs on left, Content on right */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+          
+          {/* Navigation */}
+          <div className="md:col-span-4 space-y-1.5">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
                 <button
-                  onClick={() => setMemoryEnabled(!memoryEnabled)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold cursor-pointer ${
-                    memoryEnabled
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                      : 'bg-slate-800 text-slate-500 border border-slate-700'
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-left ${
+                    isActive
+                      ? 'bg-slate-900 border border-amber-500/40 text-amber-400 shadow-md'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                   }`}
                 >
-                  {memoryEnabled ? 'ACTIVÉE 🟢' : 'DÉSACTIVÉE'}
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-amber-400' : 'text-slate-500'}`} />
+                  <span>{tab.label}</span>
                 </button>
-              </div>
+              );
+            })}
+          </div>
 
-              <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/20 space-y-2">
-                <div className="text-xs font-mono font-bold text-red-400 flex items-center gap-2">
-                  <Trash2 className="w-4 h-4" />
-                  <span>Zone de Purge Souveraine</span>
-                </div>
-                <p className="text-[11px] text-slate-400 leading-relaxed">
-                  Supprime l'intégralité des faits indexés sur ce nœud local. Cette opération est irréversible.
-                </p>
-                <button
-                  onClick={() => alert('Purge complète : Vos fichiers restent préservés, mais les souvenirs sémantiques sont remis à zéro.')}
-                  className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 text-xs font-mono cursor-pointer"
-                >
-                  Purger toute la mémoire
-                </button>
-              </div>
-            </div>
-          )}
+          {/* Content Panel */}
+          <div className="md:col-span-8">
+            <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-6">
+              
+              {/* Tab 1: Compte & Forfait */}
+              {activeTab === 'compte' && (
+                <div className="space-y-6">
+                  <h2 className="text-base font-bold text-slate-100">Profil & Abonnement</h2>
 
-          {/* SYSTÈME */}
-          {activeCategory === 'systeme' && (
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold font-mono text-slate-100 pb-2 border-b border-slate-800">
-                Nœud Local &amp; Synchronisation Cloud
-              </h3>
-
-              <div className="space-y-3">
-                <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <HardDrive className="w-5 h-5 text-emerald-400" />
+                  <div className="space-y-4">
                     <div>
-                      <div className="text-xs font-mono font-bold text-slate-200">Nœud Local Souverain</div>
-                      <div className="text-[11px] text-slate-400">Port 3000 • Processus isolé sandbox</div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1.5">Nom complet</label>
+                      <input
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1.5">E-mail</label>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:border-amber-500"
+                      />
                     </div>
                   </div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    🟢 ONLINE
-                  </span>
-                </div>
 
-                <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Cloud className="w-5 h-5 text-amber-400" />
-                    <div>
-                      <div className="text-xs font-mono font-bold text-slate-200">Miroir Cloud Chiffré</div>
-                      <div className="text-[11px] text-slate-400">Sauvegarde E2E chiffrée AES-256</div>
+                  {/* Quotas & Plan */}
+                  <div className="pt-4 border-t border-slate-800 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                        Forfait Actuel
+                      </span>
+                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30">
+                        {quota.plan.toUpperCase()} SOUVERAIN
+                      </span>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-slate-950 border border-slate-800/80 space-y-3">
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs text-slate-300">
+                          <span>Messages & Requêtes IA</span>
+                          <span>{quota.messagesUsed} / {quota.messagesLimit}</span>
+                        </div>
+                        <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                          <div
+                            className="h-full bg-amber-500 rounded-full transition-all"
+                            style={{ width: `${(quota.messagesUsed / quota.messagesLimit) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs text-slate-300">
+                          <span>Générations d'images 2K/4K</span>
+                          <span>{quota.imagesUsed} / {quota.imagesLimit}</span>
+                        </div>
+                        <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                          <div
+                            className="h-full bg-sky-500 rounded-full transition-all"
+                            style={{ width: `${(quota.imagesUsed / quota.imagesLimit) * 100}%` }}
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                    🟢 SYNCHRONISÉ
-                  </span>
                 </div>
-              </div>
-            </div>
-          )}
+              )}
 
-          {/* CONFIDENTIALITÉ & SONS */}
-          {activeCategory === 'confidentialite' && (
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold font-mono text-slate-100 pb-2 border-b border-slate-800">
-                Confidentialité &amp; Audio
-              </h3>
+              {/* Tab 2: Apparence */}
+              {activeTab === 'apparence' && (
+                <div className="space-y-6">
+                  <h2 className="text-base font-bold text-slate-100">Apparence & Internationalisation</h2>
 
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/60 border border-slate-800">
-                  <div className="flex items-center gap-2 text-xs font-mono text-slate-300">
-                    <Volume2 className="w-4 h-4 text-cyan-400" />
-                    <span>Synthèse Vocale Roam Voice</span>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-2">Thème d'affichage</label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setTheme('dark')}
+                          className={`p-3.5 rounded-xl border flex items-center justify-center space-x-2 text-xs font-semibold transition-all ${
+                            theme === 'dark'
+                              ? 'bg-slate-950 border-amber-500 text-amber-400'
+                              : 'bg-slate-950/40 border-slate-800 text-slate-400'
+                          }`}
+                        >
+                          <Moon className="w-4 h-4" />
+                          <span>Mode Sombre (Par défaut)</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTheme('light')}
+                          className={`p-3.5 rounded-xl border flex items-center justify-center space-x-2 text-xs font-semibold transition-all ${
+                            theme === 'light'
+                              ? 'bg-slate-100 border-amber-500 text-slate-900'
+                              : 'bg-slate-950/40 border-slate-800 text-slate-400'
+                          }`}
+                        >
+                          <Sun className="w-4 h-4" />
+                          <span>Mode Clair</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1.5">Langue de l'interface</label>
+                      <select
+                        value={language}
+                        onChange={(e) => setLanguage(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-100 focus:outline-none"
+                      >
+                        <option value="fr">Français (France / RDC / Afrique / Canada)</option>
+                        <option value="en">English (US / UK)</option>
+                        <option value="es">Español</option>
+                        <option value="pt">Português</option>
+                        <option value="de">Deutsch</option>
+                        <option value="zh">中文</option>
+                      </select>
+                    </div>
                   </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={voiceVolume}
-                    onChange={(e) => setVoiceVolume(parseInt(e.target.value))}
-                    className="accent-cyan-500 w-32"
-                  />
                 </div>
+              )}
 
-                <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 text-xs font-mono text-slate-400">
-                  🔒 <strong className="text-slate-200">Zéro Télémétrie Externe :</strong> Aucune invite, requête ou document de code n'est partagé avec des tiers sans votre consentement explicite.
+              {/* Tab 3: IA & Voix */}
+              {activeTab === 'ia' && (
+                <div className="space-y-6">
+                  <h2 className="text-base font-bold text-slate-100">Moteur IA & Comportement</h2>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1.5">Moteur par défaut</label>
+                      <select
+                        value={aiEngine}
+                        onChange={(e) => setAiEngine(e.target.value as any)}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-100 focus:outline-none"
+                      >
+                        <option value="auto">Automatique (Routage intelligent)</option>
+                        <option value="flash">Rapide (Flash 2.5 • Instantané)</option>
+                        <option value="reasoning">Raisonnement Profond (Thinking 2.5 • Code & Audit)</option>
+                        <option value="vision">Vision Multimodale (Analyse images & écrans)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1.5">Ton des réponses</label>
+                      <select
+                        value={personality.ton}
+                        onChange={(e) => setPersonality({ ...personality, ton: e.target.value as any })}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-100 focus:outline-none"
+                      >
+                        <option value="Professionnel">Professionnel & Clair (Recommandé)</option>
+                        <option value="Direct & Concis">Direct & Concis (Sans bavardage)</option>
+                        <option value="Créatif & Approfondi">Créatif & Approfondi</option>
+                        <option value="Pédagogique">Pédagogique & Analytique</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1.5">Voix de synthèse</label>
+                      <select
+                        value={voiceGender}
+                        onChange={(e) => setVoiceGender(e.target.value as any)}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-100 focus:outline-none"
+                      >
+                        <option value="femme">Voix Féminine (Clair & Naturel)</option>
+                        <option value="homme">Voix Masculine (Posé & Professionnel)</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Tab 4: Sécurité */}
+              {activeTab === 'securite' && (
+                <div className="space-y-6">
+                  <h2 className="text-base font-bold text-slate-100">Sécurité & Authentification</h2>
+
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <Fingerprint className="w-5 h-5 text-amber-400" />
+                        <div>
+                          <div className="text-sm font-semibold text-slate-200">Passkeys FIDO2 Matériels</div>
+                          <div className="text-xs text-slate-400">Connexion par empreinte, Face ID ou Windows Hello</div>
+                        </div>
+                      </div>
+                      <span className="text-xs text-emerald-400 font-semibold">Activé</span>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <Smartphone className="w-5 h-5 text-sky-400" />
+                        <div>
+                          <div className="text-sm font-semibold text-slate-200">Appareils connectés</div>
+                          <div className="text-xs text-slate-400">Sessions autorisées sur ce compte</div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={onOpenDevices}
+                        className="text-xs font-semibold text-amber-400 hover:text-amber-300"
+                      >
+                        Gérer →
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 5: Confidentialité */}
+              {activeTab === 'confidentialite' && (
+                <div className="space-y-6">
+                  <h2 className="text-base font-bold text-slate-100">Confidentialité & Données</h2>
+                  <p className="text-xs text-slate-400">
+                    Contrôlez l'historique et la mémoire conservée par ROAM.
+                  </p>
+                  <button
+                    onClick={onOpenPrivacy}
+                    className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/20"
+                  >
+                    Ouvrir le Centre de Confidentialité →
+                  </button>
+                </div>
+              )}
+
+              {/* Tab 6: Laboratoire Expérimental */}
+              {activeTab === 'lab' && (
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-base font-bold text-slate-100 flex items-center space-x-2">
+                      <FlaskConical className="w-5 h-5 text-amber-400" />
+                      <span>Laboratoire & Fonctionnalités Expérimentales</span>
+                    </h2>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Modules avancés pour utilisateurs experts et développeurs.
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="p-4 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center justify-between cursor-pointer">
+                      <div className="space-y-0.5">
+                        <div className="text-sm font-semibold text-slate-200">Le Double Numérique Autonome</div>
+                        <div className="text-xs text-slate-400">Simulation d'actions proactives en arrière-plan</div>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={labDoubleEnabled}
+                        onChange={(e) => setLabDoubleEnabled(e.target.checked)}
+                        className="rounded border-slate-700 text-amber-500 focus:ring-0"
+                      />
+                    </label>
+
+                    <label className="p-4 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center justify-between cursor-pointer">
+                      <div className="space-y-0.5">
+                        <div className="text-sm font-semibold text-slate-200">Observation continue de l'écran</div>
+                        <div className="text-xs text-slate-400">Diagnostic périodique sans cliquer</div>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={labContinuousScreen}
+                        onChange={(e) => setLabContinuousScreen(e.target.checked)}
+                        className="rounded border-slate-700 text-amber-500 focus:ring-0"
+                      />
+                    </label>
+
+                    <label className="p-4 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center justify-between cursor-pointer">
+                      <div className="space-y-0.5">
+                        <div className="text-sm font-semibold text-slate-200">Clé Souveraine ZK & Sandbox Éthique</div>
+                        <div className="text-xs text-slate-400">Audit de non-ingérence et chiffrement local matériel</div>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={labSovereignKey}
+                        onChange={(e) => setLabSovereignKey(e.target.checked)}
+                        className="rounded border-slate-700 text-amber-500 focus:ring-0"
+                      />
+                    </label>
+                  </div>
+                </div>
+              )}
+
             </div>
-          )}
+          </div>
+
         </div>
+
       </div>
     </div>
   );

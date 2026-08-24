@@ -1,3 +1,103 @@
+export type AppNavTab =
+  | 'home'
+  | 'chat'
+  | 'projects'
+  | 'documents'
+  | 'memory'
+  | 'actions'
+  | 'agents'
+  | 'privacy'
+  | 'devices'
+  | 'settings'
+  | 'profile'
+  | 'lab';
+
+export interface Conversation {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  messages: ChatMessage[];
+  isTemporary?: boolean;
+  projectId?: string;
+  pinned?: boolean;
+  mode?: string;
+}
+
+export interface ProjectItem {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  conversationsCount: number;
+  documentsCount: number;
+  instructions?: string;
+  tasksCount?: number;
+  createdAt: string;
+  status?: 'active' | 'archived' | 'draft';
+}
+
+export interface DocumentFile {
+  id: string;
+  name: string;
+  size: string;
+  type: 'pdf' | 'word' | 'excel' | 'powerpoint' | 'image' | 'txt' | 'csv' | 'code';
+  uploadedAt: string;
+  summary?: string;
+  extractedText?: string;
+  tags?: string[];
+}
+
+export interface DeviceSession {
+  id: string;
+  name: string;
+  type: 'android' | 'windows' | 'apple' | 'linux' | 'web';
+  location: string;
+  lastActive: string;
+  ipMasked: string;
+  isCurrent: boolean;
+}
+
+export interface CustomAgentConfig {
+  id: string;
+  name: string;
+  role: string;
+  description: string;
+  icon: string;
+  instructions: string;
+  memoryAllowed: boolean;
+  permissions: {
+    readProjects: boolean;
+    readDocs: boolean;
+    useInternet: boolean;
+    sendEmails: boolean;
+    editFiles: boolean;
+    makePurchases: boolean;
+  };
+  actionsCount: number;
+  status: 'active' | 'idle' | 'paused';
+}
+
+export interface PrivacySettings {
+  memoryEnabled: boolean;
+  historyEnabled: boolean;
+  modelImprovement: boolean;
+  personalization: boolean;
+  strictLocalMode: boolean;
+  telemetryBlocked: boolean;
+}
+
+export interface UsageQuota {
+  messagesUsed: number;
+  messagesLimit: number;
+  imagesUsed: number;
+  imagesLimit: number;
+  searchUsed: number;
+  searchLimit: number;
+  daysRemaining: number;
+  plan: 'Free' | 'Plus' | 'Pro' | 'Business';
+}
+
 export type AppScreen =
   | 'boot'
   | 'login'

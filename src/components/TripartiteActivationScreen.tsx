@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Brain, Zap, Compass, Eye, CheckCircle2, ArrowRight } from 'lucide-react';
+import { RoamLogoAnimated } from './RoamLogoAnimated';
 
 interface TripartiteActivationScreenProps {
   onComplete: () => void;
@@ -31,14 +32,9 @@ export const TripartiteActivationScreen: React.FC<TripartiteActivationScreenProp
         animate={{ opacity: 1, scale: 1 }}
         className="w-full max-w-xl p-4 sm:p-8 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-2xl backdrop-blur-md relative my-auto"
       >
-        <div className="text-center mb-5 sm:mb-8">
-          <div className="inline-flex items-center justify-center w-14 sm:w-16 h-14 sm:h-16 rounded-2xl overflow-hidden border border-amber-500/40 mb-2 sm:mb-3 shadow-[0_0_24px_rgba(245,158,11,0.25)]">
-            <img
-              src="/icon.jpg"
-              alt="ROAM'S.ai"
-              className="w-full h-full object-cover"
-              referrerPolicy="no-referrer"
-            />
+        <div className="text-center mb-5 sm:mb-8 flex flex-col items-center">
+          <div className="mb-2 sm:mb-3">
+            <RoamLogoAnimated size="xl" showEmbers={true} />
           </div>
           <h2 className="text-lg sm:text-xl font-bold font-mono text-slate-100">
             ACTIVATION DU CERVEAU TRIPARTITE

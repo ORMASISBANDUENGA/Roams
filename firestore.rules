@@ -19,6 +19,31 @@ service cloud.firestore {
       match /messages/{messageId} {
         allow read, write: if isOwner(userId);
       }
+
+      match /settings/{settingId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /journal/{journalId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /personality/{personalityId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /agents/{agentId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /capsules/{capsuleId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /rewards/{rewardId} {
+        allow read, write: if isOwner(userId);
+      }
     }
   }
 }
+

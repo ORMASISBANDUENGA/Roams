@@ -30,6 +30,10 @@
         "category": { "type": "string" },
         "tags": { "type": "array", "items": { "type": "string" } },
         "encrypted": { "type": "boolean" },
+        "importance": { "type": "number" },
+        "source": { "type": "string" },
+        "privacyLevel": { "type": "string" },
+        "lastUsedAt": { "type": "string" },
         "createdAt": { "type": "string" },
         "updatedAt": { "type": "string" }
       },
@@ -48,6 +52,21 @@
         "createdAt": { "type": "string" }
       },
       "required": ["id", "userId", "sender", "text", "createdAt"]
+    },
+    "JournalEntry": {
+      "title": "JournalEntry",
+      "description": "Entrée de journal et réflexion souveraine",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "date": { "type": "string" },
+        "title": { "type": "string" },
+        "summary": { "type": "string" },
+        "content": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["id", "userId", "date", "title", "content"]
     }
   },
   "firestore": {
@@ -62,6 +81,25 @@
     "/users/{userId}/messages/{messageId}": {
       "entity": "Message",
       "description": "Sous-collection des messages de l'utilisateur"
+    },
+    "/users/{userId}/journal/{journalId}": {
+      "entity": "JournalEntry",
+      "description": "Sous-collection du journal personnel"
+    },
+    "/users/{userId}/settings/{settingId}": {
+      "description": "Paramètres et préférences utilisateur"
+    },
+    "/users/{userId}/personality/{personalityId}": {
+      "description": "Traits de personnalité et d'IA personnalisés"
+    },
+    "/users/{userId}/agents/{agentId}": {
+      "description": "Sous-agents et connecteurs actifs"
+    },
+    "/users/{userId}/capsules/{capsuleId}": {
+      "description": "Capsules temporelles chiffrées"
+    },
+    "/users/{userId}/rewards/{rewardId}": {
+      "description": "XP, niveau et badges débloqués"
     }
   }
 }

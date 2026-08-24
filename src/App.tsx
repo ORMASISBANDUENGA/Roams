@@ -1,279 +1,326 @@
 import React, { useState, useEffect } from 'react';
 import {
-  LayoutDashboard,
+  Menu,
   MessageSquare,
-  Bot,
-  Database,
+  Plus,
+  LogOut,
+  User,
+  Zap,
+  Mic,
   Shield,
   Sliders,
-  Cpu,
-  ArrowLeft,
   Sparkles,
-  BookOpen,
-  Calendar,
-  Hourglass,
+  Layers,
   Terminal,
-  Zap,
-  Download,
-  MessageCircle,
-  Facebook,
+  Download
 } from 'lucide-react';
-import { Header } from './components/Header';
 import { BootScreen } from './components/BootScreen';
 import { AuthScreen } from './components/AuthScreen';
 import { OnboardingFlow } from './components/OnboardingFlow';
-import { TripartiteActivationScreen } from './components/TripartiteActivationScreen';
 import { NavigationDrawer } from './components/NavigationDrawer';
-import { OperationsHub } from './components/OperationsHub';
-import { ControlCenterDashboard } from './components/ControlCenterDashboard';
-import { SovereignMemoryCenter } from './components/SovereignMemoryCenter';
-import { SecurityCenter } from './components/SecurityCenter';
-import { SettingsCenter } from './components/SettingsCenter';
-import { DownloadAppModal } from './components/DownloadAppModal';
-import { SessionEndModal } from './components/SessionEndModal';
-import { UserProfileModal } from './components/UserProfileModal';
-import { UserManualModal } from './components/UserManualModal';
-import { WelcomeBackBanner } from './components/WelcomeBackBanner';
+import { HomeView } from './components/HomeView';
 import { TripartiteChat } from './components/TripartiteChat';
-import { PersonalityAndDouble } from './components/PersonalityAndDouble';
-import { JournalAndDream } from './components/JournalAndDream';
-import { AnticipationAndSplit } from './components/AnticipationAndSplit';
-import { SubAgentsAndMemory } from './components/SubAgentsAndMemory';
-import { TimeCapsuleAndSecurity } from './components/TimeCapsuleAndSecurity';
-import { ManualAndSpecs } from './components/ManualAndSpecs';
+import { ProjectsView } from './components/ProjectsView';
+import { DocumentsView } from './components/DocumentsView';
+import { SovereignMemoryCenter } from './components/SovereignMemoryCenter';
+import { ActionsView } from './components/ActionsView';
+import { AgentsView } from './components/AgentsView';
+import { PrivacyCenter } from './components/PrivacyCenter';
+import { DevicesView } from './components/DevicesView';
+import { ProfileView } from './components/ProfileView';
+import { SettingsCenter } from './components/SettingsCenter';
+import { OperationsHub } from './components/OperationsHub';
+import { VoiceModal } from './components/VoiceModal';
+import { DownloadAppModal } from './components/DownloadAppModal';
 import { RoamConsole } from './components/RoamConsole';
-import { AgentAndConnectorsHub } from './components/AgentAndConnectorsHub';
-import { EthicalGate } from './components/EthicalGate';
-import { RewardsCenter } from './components/RewardsCenter';
+import { RoamLogoAnimated } from './components/RoamLogoAnimated';
+
+import {
+  auth,
+  db,
+  onAuthStateChanged,
+  logoutFirebase,
+} from './lib/firebase';
+import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
 
 import {
   initialSystemMetrics,
   initialPersonality,
   initialMessages,
-  initialJournal,
-  initialAnticipations,
-  initialSubAgents,
-  initialSensoryMemories,
-  initialTimeCapsules,
+  initialUserIdentity,
+  initialSovereignMemories,
+  initialProjects,
+  initialDocuments,
+  initialDevices,
+  initialCustomAgents,
+  initialPrivacySettings,
+  initialUsageQuota,
+  initialDoubleState,
+  initialSecurityCenter,
   initialBubbleConfig,
   initialEthicalState,
-  initialDreamState,
-  initialRewards,
-  initialUserIdentity,
-  initialDoubleState,
-  initialSovereignMemories,
-  initialSecurityCenter,
+  initialRewards
 } from './data/initialState';
 
 import {
   AppScreen,
+  AppNavTab,
   UserIdentity,
-  DoubleState,
-  SovereignMemoryItem,
-  SecurityCenterData,
-  SystemMetrics,
   PersonalityTraits,
   ChatMessage,
-  JournalEntry,
-  AnticipationCard,
-  SubAgent,
-  SensoryMemoryItem,
-  TimeCapsuleState,
-  BubbleModeConfig,
-  EthicalBackdoorState,
-  DreamState,
-  RewardState,
-  MemoryCategory,
+  ProjectItem,
+  DocumentFile,
+  DeviceSession,
+  CustomAgentConfig,
+  PrivacySettings,
+  UsageQuota,
+  Conversation,
+  SovereignMemoryItem,
+  MemoryCategory
 } from './types/roam';
 
 export default function App() {
-  // Check if a persistent session exists (Login shown ONLY on the first time!)
-  const [currentScreen, setCurrentScreen] = useState<AppScreen>(() => {
-    try {
-      const savedSession = localStorage.getItem('roam_auth_session');
-      if (savedSession) {
-        const parsed = JSON.parse(savedSession);
-        if (parsed?.authenticated) {
-          return 'dashboard';
-        }
-      }
-    } catch (err) {
-      console.warn('Session check failed', err);
-    }
-    return 'boot';
-  });
-
-  const [showWelcomeBack, setShowWelcomeBack] = useState(true);
-
-  // Structural Mode Separation:
-  // 1. 'chat' : Dedicated Chatbot interface (text, vision, screen sharing, image generation)
-  // 2. 'operations' : Hub & Workspaces for the 15 sovereign features
-  const [activeMode, setActiveMode] = useState<'chat' | 'operations'>('chat');
-  const [activeFeature, setActiveFeature] = useState<string>('hub'); // 'hub' or specific feature ID
-
-  // Navigation Drawer state
-  const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
+  const [currentScreen, setCurrentScreen] = useState<AppScreen>('boot');
+  const [currentTab, setCurrentTab] = useState<AppNavTab>('home');
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // Modals
+  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
-  const [isSessionEndOpen, setIsSessionEndOpen] = useState(false);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [isManualModalOpen, setIsManualModalOpen] = useState(false);
-  const [consoleOpen, setConsoleOpen] = useState(false);
+  const [isConsoleOpen, setIsConsoleOpen] = useState(false);
 
-  // Sovereign User & Core State
-  const [user, setUser] = useState<UserIdentity>(() => {
-    try {
-      const savedUser = localStorage.getItem('roam_user_data');
-      if (savedUser) return JSON.parse(savedUser);
-    } catch (e) {}
-    return initialUserIdentity;
-  });
-
-  const [doubleState, setDoubleState] = useState<DoubleState>(initialDoubleState);
-  const [sovereignMemories, setSovereignMemories] = useState<SovereignMemoryItem[]>(initialSovereignMemories);
-  const [securityData, setSecurityData] = useState<SecurityCenterData>(initialSecurityCenter);
-
-  // Features State
-  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
-  const [metrics, setMetrics] = useState<SystemMetrics>(initialSystemMetrics);
+  // User State
+  const [user, setUser] = useState<UserIdentity>(initialUserIdentity);
   const [personality, setPersonality] = useState<PersonalityTraits>(initialPersonality);
-  const [journal, setJournal] = useState<JournalEntry[]>(initialJournal);
-  const [anticipations, setAnticipations] = useState<AnticipationCard[]>(initialAnticipations);
-  const [subAgents, setSubAgents] = useState<SubAgent[]>(initialSubAgents);
-  const [sensoryMemories, setSensoryMemories] = useState<SensoryMemoryItem[]>(initialSensoryMemories);
-  const [timeCapsules, setTimeCapsules] = useState<TimeCapsuleState[]>(initialTimeCapsules);
-  const [bubbleConfig, setBubbleConfig] = useState<BubbleModeConfig>(initialBubbleConfig);
-  const [ethicalState, setEthicalState] = useState<EthicalBackdoorState>(initialEthicalState);
-  const [dream, setDream] = useState<DreamState>(initialDreamState);
-  const [rewards, setRewards] = useState<RewardState>(initialRewards);
+  const [privacySettings, setPrivacySettings] = useState<PrivacySettings>(initialPrivacySettings);
+  const [quota, setQuota] = useState<UsageQuota>(initialUsageQuota);
 
-  // Settings
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  // Core Data Collections
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<string>('');
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [projects, setProjects] = useState<ProjectItem[]>(initialProjects);
+  const [documents, setDocuments] = useState<DocumentFile[]>(initialDocuments);
+  const [devices, setDevices] = useState<DeviceSession[]>(initialDevices);
+  const [agents, setAgents] = useState<CustomAgentConfig[]>(initialCustomAgents);
+  const [memories, setMemories] = useState<SovereignMemoryItem[]>(initialSovereignMemories);
 
-  // Award XP
-  const handleAwardXp = (amount: number, reason: string) => {
-    setRewards((prev) => {
-      const currentPoints = prev.points || 0;
-      const newXp = (prev.totalXp ?? currentPoints) + amount;
-      return {
-        ...prev,
-        points: currentPoints + amount,
-        totalXp: newXp,
-        currentStreak: (prev.currentStreak || 0) + 1,
-      };
+  // Firebase auth & user isolation listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      if (fbUser) {
+        const uid = fbUser.uid;
+        const displayName = fbUser.displayName || 'Architecte Souverain';
+        const userEmail = fbUser.email || '';
+
+        const updatedUser: UserIdentity = {
+          ...user,
+          id: uid,
+          name: displayName,
+          pseudonym: displayName.split(' ')[0] || 'user',
+          email: userEmail,
+          avatar: fbUser.photoURL || user.avatar,
+        };
+
+        setUser(updatedUser);
+
+        // Load isolated user data from localStorage or firestore
+        try {
+          const storedKey = `roam_convs_${uid}`;
+          const localConvs = localStorage.getItem(storedKey);
+          if (localConvs) {
+            const parsed = JSON.parse(localConvs);
+            setConversations(parsed);
+            if (parsed.length > 0) {
+              setActiveConversationId(parsed[0].id);
+              setMessages(parsed[0].messages || []);
+            }
+          } else {
+            // Fresh empty conversation space for this user
+            const initialConv: Conversation = {
+              id: `conv-${Date.now()}`,
+              title: 'Première discussion',
+              createdAt: 'À l’instant',
+              updatedAt: 'À l’instant',
+              messages: [],
+              mode: 'auto',
+            };
+            setConversations([initialConv]);
+            setActiveConversationId(initialConv.id);
+            setMessages([]);
+          }
+        } catch (e) {
+          console.warn('Error reading stored conversations:', e);
+        }
+
+        setCurrentScreen('dashboard');
+      } else {
+        // Logged out / Reset session
+        setCurrentScreen((prev) => (prev === 'boot' ? 'boot' : 'login'));
+      }
     });
-  };
 
-  // Double Action Handlers
-  const handleApproveDoubleAction = (id: string) => {
-    setDoubleState((prev) => ({
-      ...prev,
-      actions: prev.actions.filter((a) => a.id !== id),
-      actionsExecutedToday: (prev.actionsExecutedToday || 0) + 1,
-      preparedActionsCount: Math.max(0, (prev.preparedActionsCount || prev.actions.length) - 1),
-    }));
-  };
+    return () => unsubscribe();
+  }, []);
 
-  const handleDismissDoubleAction = (id: string) => {
-    setDoubleState((prev) => ({
-      ...prev,
-      actions: prev.actions.filter((a) => a.id !== id),
-      preparedActionsCount: Math.max(0, (prev.preparedActionsCount || prev.actions.length) - 1),
-    }));
-  };
+  // Save active conversation messages whenever they change
+  useEffect(() => {
+    if (!activeConversationId) return;
 
-  // Memory Handlers
-  const handleForgetMemory = (id: string) => {
-    setSovereignMemories((prev) => prev.filter((m) => m.id !== id));
-  };
+    setConversations((prev) => {
+      const updated = prev.map((c) =>
+        c.id === activeConversationId
+          ? {
+              ...c,
+              messages,
+              updatedAt: 'À l’instant',
+              title:
+                c.title === 'Première discussion' || c.title === 'Nouvelle discussion'
+                  ? messages[0]?.text?.slice(0, 30) || c.title
+                  : c.title,
+            }
+          : c
+      );
 
-  const handleClearCategory = (cat: MemoryCategory) => {
-    setSovereignMemories((prev) => prev.filter((m) => m.category !== cat));
-  };
-
-  // Toggle Node (Local / Cloud Mirror)
-  const handleToggleNode = () => {
-    setUser((prev) => {
-      const updated = {
-        ...prev,
-        nodeType: prev.nodeType === 'local' ? ('cloud_mirror' as const) : ('local' as const),
-      };
-      try {
-        localStorage.setItem('roam_user_data', JSON.stringify(updated));
-      } catch (e) {}
+      // Persist isolated
+      if (user.id) {
+        try {
+          localStorage.setItem(`roam_convs_${user.id}`, JSON.stringify(updated));
+        } catch (e) {}
+      }
       return updated;
     });
+  }, [messages, activeConversationId, user.id]);
+
+  // Create New Conversation
+  const handleNewConversation = () => {
+    const newConv: Conversation = {
+      id: `conv-${Date.now()}`,
+      title: 'Nouvelle discussion',
+      createdAt: 'À l’instant',
+      updatedAt: 'À l’instant',
+      messages: [],
+      mode: 'auto',
+    };
+    setConversations((prev) => [newConv, ...prev]);
+    setActiveConversationId(newConv.id);
+    setMessages([]);
+    setCurrentTab('chat');
   };
 
-  // Login with persistence
+  // Select conversation
+  const handleSelectConversation = (conv: Conversation) => {
+    setActiveConversationId(conv.id);
+    setMessages(conv.messages || []);
+    setCurrentTab('chat');
+  };
+
+  // Delete conversation
+  const handleDeleteConversation = (convId: string) => {
+    setConversations((prev) => {
+      const filtered = prev.filter((c) => c.id !== convId);
+      if (activeConversationId === convId) {
+        if (filtered.length > 0) {
+          setActiveConversationId(filtered[0].id);
+          setMessages(filtered[0].messages || []);
+        } else {
+          setActiveConversationId('');
+          setMessages([]);
+        }
+      }
+      return filtered;
+    });
+  };
+
+  // Start chat with a specific prompt
+  const handleStartChatWithPrompt = (
+    prompt: string,
+    options?: { autoSend?: boolean; mode?: string }
+  ) => {
+    let currentConvId = activeConversationId;
+    if (!currentConvId) {
+      const newConv: Conversation = {
+        id: `conv-${Date.now()}`,
+        title: prompt.slice(0, 30) || 'Nouvelle discussion',
+        createdAt: 'À l’instant',
+        updatedAt: 'À l’instant',
+        messages: [],
+        mode: 'auto',
+      };
+      setConversations((prev) => [newConv, ...prev]);
+      setActiveConversationId(newConv.id);
+      currentConvId = newConv.id;
+    }
+
+    if (options?.autoSend) {
+      const userMsg: ChatMessage = {
+        id: `msg-${Date.now()}`,
+        sender: 'user',
+        text: prompt,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      setMessages((prev) => [...prev, userMsg]);
+    }
+
+    setCurrentTab('chat');
+  };
+
+  // Login handler
   const handleLogin = (
-    selectedNode: 'local' | 'cloud',
+    mode: 'local' | 'cloud',
     isNewUser?: boolean,
     customUser?: Partial<UserIdentity>
   ) => {
-    const updatedUser: UserIdentity = {
+    const updated: UserIdentity = {
       ...user,
-      nodeType: selectedNode,
+      nodeType: mode,
       ...(customUser || {}),
     };
+    setUser(updated);
 
-    setUser(updatedUser);
-
-    try {
-      localStorage.setItem('roam_auth_session', JSON.stringify({ authenticated: true, timestamp: Date.now() }));
-      localStorage.setItem('roam_user_data', JSON.stringify(updatedUser));
-    } catch (e) {
-      console.warn('Could not save auth session to localStorage', e);
+    // Ensure initial conversation exists
+    if (conversations.length === 0) {
+      const initialConv: Conversation = {
+        id: `conv-${Date.now()}`,
+        title: 'Discussion principale',
+        createdAt: 'À l’instant',
+        updatedAt: 'À l’instant',
+        messages: [],
+        mode: 'auto',
+      };
+      setConversations([initialConv]);
+      setActiveConversationId(initialConv.id);
+      setMessages([]);
     }
 
     if (isNewUser) {
       setCurrentScreen('onboarding');
     } else {
-      setCurrentScreen('tripartite_activation');
+      setCurrentScreen('dashboard');
+      setCurrentTab('home');
     }
   };
 
-  // Lock / Logout Handlers
-  const handleLockSession = () => {
-    setIsSessionEndOpen(false);
-    setIsMenuDrawerOpen(false);
-    setCurrentScreen('login');
-  };
-
-  const handleLogout = () => {
+  // Logout handler - Isolates and resets data
+  const handleLogout = async () => {
     try {
-      localStorage.removeItem('roam_auth_session');
+      await logoutFirebase();
     } catch (e) {}
-    setIsSessionEndOpen(false);
-    setIsMenuDrawerOpen(false);
+
+    // Reset runtime state
+    setUser(initialUserIdentity);
+    setConversations([]);
+    setMessages([]);
+    setActiveConversationId('');
     setCurrentScreen('login');
+    setCurrentTab('home');
   };
 
-  const handleSaveNotification = (msg?: string) => {
-    if (msg) {
-      console.log(`Paramètre enregistré : ${msg}`);
-    }
-  };
-
-  // Global Keyboard Shortcut: Cmd/Ctrl + K opens Console
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setConsoleOpen((prev) => !prev);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  // 1. BOOT SEQUENCE SCREEN
+  // Screen Routing: Boot -> Login -> Onboarding -> Dashboard
   if (currentScreen === 'boot') {
     return <BootScreen onBootComplete={() => setCurrentScreen('login')} />;
   }
 
-  // 2. AUTH SCREEN (Shown ONLY on first login or when user clicks Déconnexion)
   if (currentScreen === 'login') {
     return (
       <AuthScreen
@@ -284,395 +331,337 @@ export default function App() {
     );
   }
 
-  // 3. ONBOARDING WIZARD
   if (currentScreen === 'onboarding') {
     return (
       <OnboardingFlow
         initialUser={user}
-        onComplete={(updatedUser, updatedTraits) => {
+        onComplete={(updatedUser, updatedPersonality) => {
           setUser(updatedUser);
-          setPersonality(updatedTraits);
-          try {
-            localStorage.setItem('roam_user_data', JSON.stringify(updatedUser));
-          } catch (e) {}
-          setCurrentScreen('tripartite_activation');
+          setPersonality(updatedPersonality);
+          setCurrentScreen('dashboard');
+          setCurrentTab('home');
         }}
       />
     );
   }
 
-  // 4. TRIPARTITE BRAIN ACTIVATION SCREEN
-  if (currentScreen === 'tripartite_activation') {
-    return (
-      <TripartiteActivationScreen
-        onComplete={() => setCurrentScreen('dashboard')}
-      />
-    );
-  }
-
-  // 5. MAIN DASHBOARD / CONTROL CENTER (Cleaned: Single Header Bar + Dual Modes)
+  // Dashboard Main Shell
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-amber-500 selection:text-slate-950">
-      {/* Top Header Bar with Hamburger Button & Mode Selector (No second navigation bar!) */}
-      <Header
-        activeMode={activeMode}
-        setActiveMode={setActiveMode}
-        onOpenMenuDrawer={() => setIsMenuDrawerOpen(true)}
-        user={user}
-        personality={personality}
-        bubbleConfig={bubbleConfig}
-        setBubbleConfig={setBubbleConfig}
-        ethicalState={ethicalState}
-        onOpenConsole={() => setConsoleOpen(true)}
-        onOpenDownloadModal={() => setIsDownloadModalOpen(true)}
-        onOpenSessionEnd={() => setIsSessionEndOpen(true)}
-        onOpenProfileModal={() => setIsProfileModalOpen(true)}
-        onOpenManualModal={() => setIsManualModalOpen(true)}
-        voiceEnabled={voiceEnabled}
-        setVoiceEnabled={setVoiceEnabled}
-        onToggleNode={handleToggleNode}
-      />
-
-      {/* Navigation Drawer Menu (☰ Hamburger, 15 features, message history & logout bar) */}
+    <div className="flex h-screen w-screen overflow-hidden bg-slate-950 text-slate-100 font-sans">
+      
+      {/* Desktop Sidebar & Mobile Drawer */}
       <NavigationDrawer
-        isOpen={isMenuDrawerOpen}
-        onClose={() => setIsMenuDrawerOpen(false)}
-        activeMode={activeMode}
-        setActiveMode={setActiveMode}
-        activeFeature={activeFeature}
-        setActiveFeature={setActiveFeature}
-        user={user}
-        personality={personality}
-        bubbleConfig={bubbleConfig}
-        setBubbleConfig={setBubbleConfig}
-        ethicalState={ethicalState}
-        messages={messages}
-        onSelectHistoryMessage={(msg) => {
-          // Navigate to chat
-          setActiveMode('chat');
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        currentTab={currentTab}
+        onSelectTab={(tab) => {
+          setCurrentTab(tab);
+          setIsDrawerOpen(false);
         }}
-        onClearHistory={() => setMessages(initialMessages)}
-        onOpenConsole={() => setConsoleOpen(true)}
-        onOpenDownloadModal={() => setIsDownloadModalOpen(true)}
-        onOpenProfileModal={() => setIsProfileModalOpen(true)}
-        onOpenManualModal={() => setIsManualModalOpen(true)}
-        onLockSession={handleLockSession}
+        conversations={conversations}
+        activeConversationId={activeConversationId}
+        onSelectConversation={handleSelectConversation}
+        onNewConversation={handleNewConversation}
+        onDeleteConversation={handleDeleteConversation}
+        user={user}
         onLogout={handleLogout}
-        onToggleNode={handleToggleNode}
+        onOpenProfile={() => {
+          setCurrentTab('profile');
+          setIsDrawerOpen(false);
+        }}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-2.5 sm:px-4 pt-3 sm:pt-5 pb-16 sm:pb-8">
-        {/* ========================================================================= */}
-        {/* PARTIE 1 : CHATBOT DÉDIÉ (MESSAGES TEXTE, VISION, PARTAGE D'ÉCRAN & IA) */}
-        {/* ========================================================================= */}
-        {activeMode === 'chat' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between px-1">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono font-bold tracking-wider px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  💬 CANAL CHATBOT PRINCIPAL
-                </span>
-                <span className="text-xs font-mono text-slate-400 hidden sm:inline">
-                  Vision • Partage d'écran en direct • Recherche Web
-                </span>
-              </div>
-
-              <button
-                onClick={() => {
-                  setActiveMode('operations');
-                  setActiveFeature('hub');
-                }}
-                className="text-xs font-mono text-slate-400 hover:text-amber-300 flex items-center gap-1 transition-colors cursor-pointer"
-              >
-                <span>Accéder aux 15 fonctionnalités →</span>
-              </button>
+      {/* Center Main Stage */}
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
+        
+        {/* Mobile Header Bar */}
+        <header className="lg:hidden h-14 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md flex items-center justify-between px-4 shrink-0 z-30">
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setIsDrawerOpen(true)}
+              className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-slate-100"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="flex items-center space-x-2">
+              <RoamLogoAnimated size="sm" />
+              <span className="font-bold text-sm tracking-wider font-mono text-slate-100">ROAM'S.AI</span>
             </div>
+          </div>
 
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={handleNewConversation}
+              className="p-2 rounded-xl bg-amber-500 text-slate-950 font-bold"
+              title="Nouvelle discussion"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setCurrentTab('profile')}
+              className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-xs font-bold text-slate-950"
+            >
+              {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+            </button>
+          </div>
+        </header>
+
+        {/* Tab Router Stage */}
+        <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          {currentTab === 'home' && (
+            <HomeView
+              user={user}
+              projects={projects}
+              conversations={conversations}
+              onStartChatWithPrompt={handleStartChatWithPrompt}
+              onNavigateTab={(tab) => setCurrentTab(tab)}
+              onOpenProfile={() => setCurrentTab('profile')}
+              onStartVoiceChat={() => setIsVoiceModalOpen(true)}
+            />
+          )}
+
+          {currentTab === 'chat' && (
             <TripartiteChat
               messages={messages}
               setMessages={setMessages}
               personality={personality}
               setPersonality={setPersonality}
-              onAwardXp={handleAwardXp}
-              voiceEnabled={voiceEnabled}
+              onAwardXp={() => {}}
+              voiceEnabled={true}
               user={user}
-              onOpenManualModal={() => setIsManualModalOpen(true)}
             />
-          </div>
-        )}
+          )}
 
-        {/* ========================================================================= */}
-        {/* PARTIE 2 : HUB OPÉRATIONS & LES 15 FONCTIONNALITÉS SOUVERAINES */}
-        {/* ========================================================================= */}
-        {activeMode === 'operations' && (
-          <div className="space-y-5">
-            {/* Breadcrumb if inside a specific feature */}
-            {activeFeature !== 'hub' && (
-              <div className="flex items-center justify-between bg-slate-900/90 border border-slate-800 rounded-xl px-4 py-2.5 shadow-sm">
-                <button
-                  onClick={() => setActiveFeature('hub')}
-                  className="flex items-center gap-2 text-xs font-mono font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer group"
-                >
-                  <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                  <span>← Retour au Hub des 15 Piliers</span>
-                </button>
+          {currentTab === 'projects' && (
+            <ProjectsView
+              projects={projects}
+              onSelectProject={(proj) => {
+                handleStartChatWithPrompt(`Travaillons sur le projet "${proj.name}".`);
+              }}
+              onCreateProject={(newProj) => {
+                setProjects((prev) => [{ id: `proj-${Date.now()}`, ...newProj } as ProjectItem, ...prev]);
+              }}
+              onDeleteProject={(id) => {
+                setProjects((prev) => prev.filter((p) => p.id !== id));
+              }}
+              onStartChatInProject={(name) => {
+                handleStartChatWithPrompt(`Dans le cadre du projet "${name}", `);
+              }}
+            />
+          )}
 
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-mono text-slate-400">Espace actif :</span>
-                  <span className="text-xs font-mono font-bold text-slate-200 uppercase">
-                    {activeFeature}
-                  </span>
-                </div>
-              </div>
-            )}
+          {currentTab === 'documents' && (
+            <DocumentsView
+              documents={documents}
+              onUploadDocument={(doc) => {
+                setDocuments((prev) => [doc, ...prev]);
+              }}
+              onDeleteDocument={(id) => {
+                setDocuments((prev) => prev.filter((d) => d.id !== id));
+              }}
+              onAnalyzeDocumentInChat={(doc, prompt) => {
+                handleStartChatWithPrompt(`[Document : ${doc.name}]\n\n${prompt}`, { autoSend: true });
+              }}
+            />
+          )}
 
-            {/* 0. Executive Hub (All 15 Features Categorized & Organized) */}
-            {activeFeature === 'hub' && (
+          {currentTab === 'memory' && (
+            <SovereignMemoryCenter
+              memories={memories}
+              setMemories={setMemories}
+              onForgetMemory={(id) => setMemories((prev) => prev.filter((m) => m.id !== id))}
+              onClearCategory={(cat) => setMemories((prev) => prev.filter((m) => m.category !== cat))}
+            />
+          )}
+
+          {currentTab === 'actions' && (
+            <ActionsView
+              onTriggerAction={(prompt, options) => {
+                handleStartChatWithPrompt(prompt, options);
+              }}
+            />
+          )}
+
+          {currentTab === 'agents' && (
+            <AgentsView
+              agents={agents}
+              onCreateAgent={(agent) => {
+                setAgents((prev) => [agent, ...prev]);
+              }}
+              onDeleteAgent={(id) => {
+                setAgents((prev) => prev.filter((a) => a.id !== id));
+              }}
+              onSelectAgentForChat={(agent) => {
+                handleStartChatWithPrompt(`Bonjour ${agent.name}, aide-moi avec ton expertise.`, { autoSend: true });
+              }}
+            />
+          )}
+
+          {currentTab === 'privacy' && (
+            <PrivacyCenter
+              user={user}
+              privacySettings={privacySettings}
+              onUpdatePrivacySettings={setPrivacySettings}
+              onExportAllData={() => {
+                const fullData = {
+                  user,
+                  conversations,
+                  projects,
+                  documents,
+                  memories,
+                  privacySettings,
+                  exportedAt: new Date().toISOString(),
+                };
+                const blob = new Blob([JSON.stringify(fullData, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `roam-sovereign-backup-${Date.now()}.json`;
+                a.click();
+              }}
+              onClearAllUserData={() => {
+                setConversations([]);
+                setMessages([]);
+                setMemories([]);
+                if (user.id) {
+                  localStorage.removeItem(`roam_convs_${user.id}`);
+                }
+              }}
+              onDeleteAccount={handleLogout}
+            />
+          )}
+
+          {currentTab === 'devices' && (
+            <DevicesView
+              devices={devices}
+              onDisconnectDevice={(id) => {
+                setDevices((prev) => prev.filter((d) => d.id !== id));
+              }}
+              onDisconnectAllOtherDevices={() => {
+                setDevices((prev) => prev.filter((d) => d.isCurrent));
+              }}
+            />
+          )}
+
+          {currentTab === 'profile' && (
+            <ProfileView
+              user={user}
+              onUpdateUser={(updated) => setUser((prev) => ({ ...prev, ...updated }))}
+              onOpenDevices={() => setCurrentTab('devices')}
+            />
+          )}
+
+          {currentTab === 'settings' && (
+            <SettingsCenter
+              user={user}
+              setUser={setUser}
+              personality={personality}
+              setPersonality={setPersonality}
+              quota={quota}
+              onSaveNotification={() => {}}
+              onOpenDevices={() => setCurrentTab('devices')}
+              onOpenPrivacy={() => setCurrentTab('privacy')}
+            />
+          )}
+
+          {currentTab === 'lab' && (
+            <div className="flex-1 overflow-y-auto p-4 md:p-8">
               <OperationsHub
-                onSelectFeature={(featId) => setActiveFeature(featId)}
-                onSwitchToChat={() => setActiveMode('chat')}
+                onSelectFeature={(featId) => {
+                  console.log('Lab feature selected:', featId);
+                }}
+                onSwitchToChat={() => setCurrentTab('chat')}
                 user={user}
-                metrics={metrics}
-                doubleState={doubleState}
+                metrics={initialSystemMetrics}
+                doubleState={initialDoubleState}
                 personality={personality}
-                bubbleConfig={bubbleConfig}
-                setBubbleConfig={setBubbleConfig}
-                onOpenConsole={() => setConsoleOpen(true)}
+                bubbleConfig={initialBubbleConfig}
+                setBubbleConfig={() => {}}
+                onOpenConsole={() => setIsConsoleOpen(true)}
                 onOpenDownloadModal={() => setIsDownloadModalOpen(true)}
               />
-            )}
+            </div>
+          )}
+        </main>
 
-            {/* 1. Cockpit Dashboard */}
-            {activeFeature === 'dashboard' && (
-              <ControlCenterDashboard
-                user={user}
-                doubleState={doubleState}
-                metrics={metrics}
-                recentJournal={journal}
-                anticipations={anticipations}
-                onNavigateTab={(tab) => {
-                  if (tab === 'chat') {
-                    setActiveMode('chat');
-                  } else {
-                    setActiveFeature(tab);
-                  }
-                }}
-                onApproveDoubleAction={handleApproveDoubleAction}
-                onDismissDoubleAction={handleDismissDoubleAction}
-                onOpenConsole={() => setConsoleOpen(true)}
-                onOpenProfileModal={() => setIsProfileModalOpen(true)}
-              />
-            )}
+        {/* Mobile Bottom Navigation Bar */}
+        <nav className="lg:hidden h-14 border-t border-slate-800/80 bg-slate-950/95 backdrop-blur-md flex items-center justify-around px-2 shrink-0 z-20">
+          <button
+            onClick={() => setCurrentTab('home')}
+            className={`flex flex-col items-center justify-center space-y-0.5 text-[10px] font-medium transition-colors ${
+              currentTab === 'home' ? 'text-amber-400' : 'text-slate-400'
+            }`}
+          >
+            <span className="text-base">🏠</span>
+            <span>Accueil</span>
+          </button>
 
-            {/* 2. Le Double & Personnalité */}
-            {activeFeature === 'double' && (
-              <PersonalityAndDouble
-                personality={personality}
-                setPersonality={setPersonality}
-                onAwardXp={handleAwardXp}
-                user={user}
-              />
-            )}
+          <button
+            onClick={() => setCurrentTab('chat')}
+            className={`flex flex-col items-center justify-center space-y-0.5 text-[10px] font-medium transition-colors ${
+              currentTab === 'chat' ? 'text-amber-400' : 'text-slate-400'
+            }`}
+          >
+            <span className="text-base">💬</span>
+            <span>Chat</span>
+          </button>
 
-            {/* 3. Mémoire Souveraine ZK */}
-            {activeFeature === 'memory' && (
-              <SovereignMemoryCenter
-                memories={sovereignMemories}
-                setMemories={setSovereignMemories}
-                onForgetMemory={handleForgetMemory}
-                onClearCategory={handleClearCategory}
-              />
-            )}
+          <button
+            onClick={() => setCurrentTab('projects')}
+            className={`flex flex-col items-center justify-center space-y-0.5 text-[10px] font-medium transition-colors ${
+              currentTab === 'projects' ? 'text-amber-400' : 'text-slate-400'
+            }`}
+          >
+            <span className="text-base">📁</span>
+            <span>Projets</span>
+          </button>
 
-            {/* 4. Centre de Sécurité & Clés AES */}
-            {activeFeature === 'security' && (
-              <SecurityCenter
-                securityData={securityData}
-                setSecurityData={setSecurityData}
-              />
-            )}
+          <button
+            onClick={() => setCurrentTab('profile')}
+            className={`flex flex-col items-center justify-center space-y-0.5 text-[10px] font-medium transition-colors ${
+              currentTab === 'profile' ? 'text-amber-400' : 'text-slate-400'
+            }`}
+          >
+            <span className="text-base">👤</span>
+            <span>Profil</span>
+          </button>
 
-            {/* 5. Sous-Agents & Ruche */}
-            {activeFeature === 'subagents' && (
-              <SubAgentsAndMemory
-                subAgents={subAgents}
-                setSubAgents={setSubAgents}
-                sensoryMemories={sensoryMemories}
-                setSensoryMemories={setSensoryMemories}
-                onAwardXp={handleAwardXp}
-              />
-            )}
+          <button
+            onClick={() => setIsDrawerOpen(true)}
+            className="flex flex-col items-center justify-center space-y-0.5 text-[10px] font-medium text-slate-400"
+          >
+            <span className="text-base">☰</span>
+            <span>Menu</span>
+          </button>
+        </nav>
+      </div>
 
-            {/* 6. Rêve & Journal Cognitif */}
-            {activeFeature === 'journal' && (
-              <JournalAndDream
-                journal={journal}
-                setJournal={setJournal}
-                dream={dream}
-                setDream={setDream}
-                onAwardXp={handleAwardXp}
-              />
-            )}
-
-            {/* 7. Anticipation & Découpage */}
-            {activeFeature === 'anticipation' && (
-              <AnticipationAndSplit
-                anticipations={anticipations}
-                setAnticipations={setAnticipations}
-                onAwardXp={handleAwardXp}
-              />
-            )}
-
-            {/* 8. Manuel & Spécifications V4.1 (15 Piliers) */}
-            {activeFeature === 'manual' && <ManualAndSpecs />}
-
-            {/* 9. Capsule Temporelle & Historique */}
-            {activeFeature === 'capsule' && (
-              <TimeCapsuleAndSecurity
-                timeCapsules={timeCapsules}
-                setTimeCapsules={setTimeCapsules}
-                bubbleConfig={bubbleConfig}
-                setBubbleConfig={setBubbleConfig}
-                ethicalState={ethicalState}
-                setEthicalState={setEthicalState}
-                rewards={rewards}
-                setRewards={setRewards}
-                personality={personality}
-                setPersonality={setPersonality}
-                onAwardXp={handleAwardXp}
-              />
-            )}
-
-            {/* 11. Porte Éthique & Souveraineté */}
-            {activeFeature === 'ethical' && (
-              <EthicalGate
-                ethicalState={ethicalState}
-                setEthicalState={setEthicalState}
-                onAwardXp={handleAwardXp}
-              />
-            )}
-
-            {/* 13. Niveaux, Trophées & XP */}
-            {activeFeature === 'rewards' && (
-              <RewardsCenter
-                user={user}
-                onUpgradeAutonomy={(lvl) => setUser((prev) => ({ ...prev, autonomyLevel: lvl }))}
-                onAwardXp={handleAwardXp}
-              />
-            )}
-
-            {/* 14. Paramètres & Personnalité */}
-            {activeFeature === 'settings' && (
-              <SettingsCenter
-                user={user}
-                setUser={setUser}
-                personality={personality}
-                setPersonality={setPersonality}
-                onSaveNotification={handleSaveNotification}
-              />
-            )}
-
-            {/* Agent d'Exécution, Terminal PC, Téléphonie, WhatsApp, Facebook & Search Console */}
-            {(activeFeature === 'agent' ||
-              activeFeature === 'connectors' ||
-              activeFeature === 'terminal' ||
-              activeFeature === 'plugins' ||
-              activeFeature === 'calls' ||
-              activeFeature === 'hosting_seo') && (
-              <AgentAndConnectorsHub
-                user={user}
-                personality={personality}
-                onAwardXp={handleAwardXp}
-                voiceEnabled={voiceEnabled}
-              />
-            )}
-          </div>
-        )}
-      </main>
-
-      {/* Global Modals */}
-      <DownloadAppModal
-        isOpen={isDownloadModalOpen}
-        onClose={() => setIsDownloadModalOpen(false)}
-      />
-
-      <SessionEndModal
-        isOpen={isSessionEndOpen}
-        onClose={() => setIsSessionEndOpen(false)}
-        onLockSession={handleLockSession}
-        onLogout={handleLogout}
-      />
-
-      <UserProfileModal
-        isOpen={isProfileModalOpen}
-        onClose={() => setIsProfileModalOpen(false)}
-        user={user}
-        onUpdateUser={(updated) => {
-          const newUser = { ...user, ...updated };
-          setUser(newUser);
-          try {
-            localStorage.setItem('roam_user_data', JSON.stringify(newUser));
-          } catch (e) {}
-        }}
-        onSwitchAccount={() => {
-          setIsProfileModalOpen(false);
-          handleLogout();
+      {/* Voice Assistant Modal */}
+      <VoiceModal
+        isOpen={isVoiceModalOpen}
+        onClose={() => setIsVoiceModalOpen(false)}
+        onSendVoiceTranscription={(transcript) => {
+          handleStartChatWithPrompt(transcript, { autoSend: true });
         }}
       />
 
-      <UserManualModal
-        isOpen={isManualModalOpen}
-        onClose={() => setIsManualModalOpen(false)}
-      />
+      {/* Download & Console Modals */}
+      {isDownloadModalOpen && (
+        <DownloadAppModal isOpen={isDownloadModalOpen} onClose={() => setIsDownloadModalOpen(false)} />
+      )}
 
-      <RoamConsole
-        isOpen={consoleOpen}
-        onClose={() => setConsoleOpen(false)}
-        personality={personality}
-        rewards={rewards}
-        bubbleConfig={bubbleConfig}
-        ethicalState={ethicalState}
-        onAwardXp={handleAwardXp}
-      />
+      {isConsoleOpen && (
+        <RoamConsole
+          isOpen={isConsoleOpen}
+          onClose={() => setIsConsoleOpen(false)}
+          personality={personality}
+          rewards={initialRewards}
+          bubbleConfig={initialBubbleConfig}
+          ethicalState={initialEthicalState}
+          onAwardXp={() => {}}
+        />
+      )}
 
-      {/* Minimal Sovereign Footer with WhatsApp and Facebook */}
-      <footer className="py-3 px-4 sm:px-6 bg-slate-950 border-t border-slate-900 text-slate-500 text-xs flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="flex items-center gap-2 font-mono text-[11px]">
-          <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-          <span>ROAM’S.AI V1.0 • NŒUD SOUVERAIN {user.nodeType.toUpperCase()}</span>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          <div className="text-[11px] text-slate-500 font-mono hidden md:block">
-            Architecte : {user.name} • Autonomie Niveau {user.autonomyLevel}
-          </div>
-
-          {/* Social Links: WhatsApp & Facebook (Phone number is strictly invisible) */}
-          <div className="flex items-center gap-2 font-mono">
-            <a
-              href="https://wa.me/243896082244"
-              target="_blank"
-              rel="noopener noreferrer"
-              title="Contacter sur WhatsApp"
-              aria-label="WhatsApp"
-              className="p-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/25 text-emerald-400 hover:text-emerald-300 border border-emerald-500/30 transition-all hover:scale-105"
-            >
-              <MessageCircle className="w-4 h-4" />
-            </a>
-            <a
-              href="https://www.facebook.com/oromasis.banduenga"
-              target="_blank"
-              rel="noopener noreferrer"
-              title="Profil Facebook"
-              aria-label="Facebook"
-              className="p-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/25 text-blue-400 hover:text-blue-300 border border-blue-500/30 transition-all hover:scale-105"
-            >
-              <Facebook className="w-4 h-4" />
-            </a>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

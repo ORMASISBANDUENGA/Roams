@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Check, Copy, ExternalLink } from 'lucide-react';
+import { Check, Copy, ExternalLink, Brain, ChevronDown, ChevronRight, Sparkles } from 'lucide-react';
 
 interface MarkdownRendererProps {
   content: string;
@@ -10,6 +10,7 @@ interface MarkdownRendererProps {
 
 export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className = '' }) => {
   const [copiedCodeIdx, setCopiedCodeIdx] = useState<number | null>(null);
+  const [isThinkingOpen, setIsThinkingOpen] = useState<boolean>(true);
 
   const handleCopyCode = (codeText: string, idx: number) => {
     navigator.clipboard.writeText(codeText);
@@ -21,8 +22,51 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, cla
 
   let codeBlockCounter = 0;
 
+  // Extract <think> ... </think> or [think] ... [/think] blocks if present
+  let thinkContent = '';
+  let mainContent = content || '';
+
+  const thinkMatch = mainContent.match(/<think>([\s\S]*?)<\/think>/i) || mainContent.match(/\[think\]([\s\S]*?)\[\/think\]/i);
+  if (thinkMatch) {
+    thinkContent = thinkMatch[1].trim();
+    mainContent = mainContent.replace(thinkMatch[0], '').trim();
+  }
+
   return (
     <div className={`prose-custom text-slate-200 text-sm leading-relaxed ${className}`}>
+      {/* DeepSeek / Gemini 2.5 Style Thinking Mode Accordion */}
+      {thinkContent && (
+        <div className="mb-4 rounded-xl border border-indigo-500/40 bg-indigo-950/30 overflow-hidden shadow-md">
+          <button
+            onClick={() => setIsThinkingOpen(!isThinkingOpen)}
+            className="w-full flex items-center justify-between px-3.5 py-2 bg-indigo-900/40 hover:bg-indigo-900/60 border-b border-indigo-500/20 text-xs font-mono text-indigo-300 transition-colors cursor-pointer select-none"
+          >
+            <div className="flex items-center gap-2">
+              <Brain className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
+              <span className="font-bold tracking-wide">Raisonnement Profond (Pensée de l'IA)</span>
+              <span className="px-1.5 py-0.2 rounded text-[10px] bg-indigo-500/20 text-indigo-200 border border-indigo-500/30">
+                CoT DeepSeek / Gemini
+              </span>
+            </div>
+            <div className="flex items-center gap-1 text-[11px] text-indigo-400">
+              <span>{isThinkingOpen ? 'Masquer' : 'Déplier'}</span>
+              {isThinkingOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+            </div>
+          </button>
+
+          {isThinkingOpen && (
+            <div className="p-3.5 text-xs text-indigo-200/90 font-mono leading-relaxed bg-slate-950/50 border-t border-indigo-500/10 space-y-1.5 whitespace-pre-wrap">
+              <div className="flex items-center gap-1.5 text-indigo-400 font-semibold mb-1">
+                <Sparkles className="w-3 h-3 text-amber-400" />
+                <span>Processus de déduction logique :</span>
+              </div>
+              {thinkContent}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Main Formatted Markdown */}
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
@@ -182,7 +226,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, cla
           hr: () => <hr className="my-4 border-t border-slate-800" />,
         }}
       >
-        {content}
+        {mainContent}
       </ReactMarkdown>
     </div>
   );
